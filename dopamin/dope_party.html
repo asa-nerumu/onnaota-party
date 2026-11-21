@@ -1,0 +1,3162 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>DOPE♡JIRAI PARTY 8 — OVERLOAD EDITION</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- PeerJS (WebRTC P2P) -->
+  <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+  <!-- Google Fonts: Mochiy Pop One, Zen Maru Gothic, DotGothic16, Orbitron -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Mochiy+Pop+One&family=Orbitron:wght@700;900&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg-void: #07040d;
+      --bg-deep: #12061f;
+      --pink: #ff1e8e;
+      --cyan: #00f5ff;
+      --purple: #b429ff;
+      --lime: #ccff00;
+      --chrome: #f8f6ff;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-void);
+      color: #ffffff;
+      font-family: 'Zen Maru Gothic', sans-serif;
+      min-height: 100dvh;
+      overflow-x: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+
+    button, .tap-target, input {
+      touch-action: manipulation;
+    }
+
+    .font-pop { font-family: 'Mochiy Pop One', 'Zen Maru Gothic', sans-serif; }
+    .font-pixel { font-family: 'DotGothic16', monospace; }
+    .font-cyber { font-family: 'Orbitron', monospace; }
+
+    /* =========================================================================
+     * 1. 多層サイバー背景（パースグリッド＋ハーフトーン＋CRT走査線＋SVG浮遊）
+     * ======================================================================= */
+    .bg-stage {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+      background:
+        radial-gradient(ellipse at 50% 18%, rgba(180, 41, 255, 0.28) 0%, transparent 55%),
+        radial-gradient(ellipse at 15% 85%, rgba(255, 30, 142, 0.25) 0%, transparent 50%),
+        radial-gradient(ellipse at 85% 80%, rgba(0, 245, 255, 0.2) 0%, transparent 50%),
+        linear-gradient(180deg, #07040d 0%, #12061f 55%, #090312 100%);
+    }
+
+    /* パースのついたネオンサイバーグリッド（奥行きスクロール） */
+    .cyber-grid-floor {
+      position: absolute;
+      left: -40%;
+      right: -40%;
+      bottom: -15%;
+      height: 62%;
+      background-image:
+        linear-gradient(to right, rgba(255, 30, 142, 0.32) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0, 245, 255, 0.35) 1px, transparent 1px);
+      background-size: 46px 46px;
+      transform: perspective(360px) rotateX(64deg);
+      transform-origin: center top;
+      animation: gridScroll 2.4s linear infinite;
+      mask-image: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.9) 35%, rgba(0,0,0,1) 100%);
+      -webkit-mask-image: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.9) 35%, rgba(0,0,0,1) 100%);
+    }
+
+    @keyframes gridScroll {
+      0% { background-position: 0 0; }
+      100% { background-position: 0 46px; }
+    }
+
+    /* ハーフトーンドット */
+    .halftone-layer {
+      position: absolute;
+      inset: 0;
+      background-image: radial-gradient(rgba(255, 30, 142, 0.16) 1px, transparent 1px);
+      background-size: 14px 14px;
+      opacity: 0.55;
+    }
+
+    /* CRTスキャンラインオーバーレイ */
+    .crt-scanlines {
+      position: fixed;
+      inset: 0;
+      z-index: 45;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.16) 0px,
+        rgba(0, 0, 0, 0.16) 1px,
+        transparent 1px,
+        transparent 3px
+      );
+      opacity: 0.45;
+    }
+
+    /* 浮遊SVG地雷モチーフ */
+    @keyframes floatMotif {
+      0%, 100% { transform: translateY(0px) rotate(-6deg) scale(1); opacity: 0.34; }
+      50% { transform: translateY(-22px) rotate(8deg) scale(1.1); opacity: 0.72; }
+    }
+    .svg-motif {
+      position: absolute;
+      animation: floatMotif ease-in-out infinite;
+      filter: drop-shadow(0 0 10px rgba(255, 30, 142, 0.75));
+    }
+
+    /* =========================================================================
+     * 2. 上下電光掲示板マーキー
+     * ======================================================================= */
+    .marquee-bar {
+      position: relative;
+      overflow: hidden;
+      white-space: nowrap;
+      background: #08020f;
+      border-bottom: 1.5px solid var(--pink);
+      box-shadow: 0 0 14px rgba(255, 30, 142, 0.45);
+      height: 24px;
+      display: flex;
+      align-items: center;
+      z-index: 42;
+    }
+    .marquee-bar-bottom {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      border-bottom: none;
+      border-top: 1.5px solid var(--cyan);
+      box-shadow: 0 0 14px rgba(0, 245, 255, 0.45);
+      z-index: 43;
+    }
+    .marquee-track {
+      display: inline-flex;
+      animation: marqueeRun 18s linear infinite;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+    }
+    .marquee-track-rev {
+      animation: marqueeRunRev 20s linear infinite;
+    }
+    @keyframes marqueeRun {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+    @keyframes marqueeRunRev {
+      0% { transform: translateX(-50%); }
+      100% { transform: translateX(0); }
+    }
+
+    /* =========================================================================
+     * 3. Y2K×地雷系「デコ・ウィンドウ＆ゴシックレース」コンテナ
+     * ======================================================================= */
+    .dope-window {
+      position: relative;
+      background: linear-gradient(180deg, rgba(22, 8, 36, 0.94) 0%, rgba(10, 4, 18, 0.97) 100%);
+      border: 2.5px solid var(--pink);
+      border-radius: 18px;
+      box-shadow:
+        0 0 0 2px rgba(255, 255, 255, 0.14) inset,
+        0 0 26px rgba(255, 30, 142, 0.35),
+        0 12px 32px rgba(0, 0, 0, 0.78);
+      overflow: hidden;
+    }
+
+    .dope-window-cyan {
+      border-color: var(--cyan);
+      box-shadow:
+        0 0 0 2px rgba(255, 255, 255, 0.14) inset,
+        0 0 26px rgba(0, 245, 255, 0.32),
+        0 12px 32px rgba(0, 0, 0, 0.78);
+    }
+
+    /* ホログラフィック・シマー（斜めに走るプリズム光沢） */
+    .holo-shimmer::after {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -120%;
+      width: 65%;
+      height: 200%;
+      background: linear-gradient(
+        115deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.03) 35%,
+        rgba(255, 30, 142, 0.14) 46%,
+        rgba(0, 245, 255, 0.18) 52%,
+        rgba(204, 255, 0, 0.12) 58%,
+        transparent 70%
+      );
+      transform: skewX(-18deg);
+      animation: shimmerSweep 5.2s ease-in-out infinite;
+      pointer-events: none;
+      z-index: 2;
+    }
+    @keyframes shimmerSweep {
+      0%, 55% { left: -120%; }
+      100% { left: 165%; }
+    }
+
+    /* 平成サイバーOSタイトルバー */
+    .os-titlebar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 10px;
+      background: linear-gradient(90deg, #ff1e8e 0%, #b429ff 58%, #00f5ff 100%);
+      border-bottom: 2px solid #ffffff;
+      color: #ffffff;
+      font-family: 'DotGothic16', monospace;
+      font-size: 11px;
+      font-weight: 700;
+      text-shadow: 1px 1px 0 #07040d;
+      position: relative;
+      z-index: 3;
+    }
+    .os-led {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--lime);
+      box-shadow: 0 0 8px var(--lime);
+      animation: ledBlink 1.1s steps(2) infinite;
+    }
+    @keyframes ledBlink {
+      0% { opacity: 1; }
+      100% { opacity: 0.25; }
+    }
+    .os-btn {
+      width: 17px;
+      height: 17px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: #12061f;
+      border: 1.5px solid #ffffff;
+      border-radius: 4px;
+      font-size: 10px;
+      line-height: 1;
+      color: #ffffff;
+      box-shadow: 1px 1px 0 rgba(0,0,0,0.6);
+    }
+
+    /* 黒×ピンクのチェッカーフラッグ帯 */
+    .checker-strip {
+      height: 8px;
+      width: 100%;
+      background-image:
+        linear-gradient(45deg, #ff1e8e 25%, transparent 25%),
+        linear-gradient(-45deg, #ff1e8e 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #ff1e8e 75%),
+        linear-gradient(-45deg, transparent 75%, #ff1e8e 75%);
+      background-size: 8px 8px;
+      background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
+      background-color: #090311;
+      opacity: 0.85;
+    }
+
+    /* SVGデータURIによるゴシックレース／スカラップフリル縁取り */
+    .gothic-lace-top {
+      height: 11px;
+      width: 100%;
+      background-repeat: repeat-x;
+      background-size: 24px 11px;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='11' viewBox='0 0 24 11'%3E%3Cpath d='M0 0 H24 V3 C20 3 18 10 12 10 C6 10 4 3 0 3 Z' fill='%23ff1e8e' fill-opacity='0.35' stroke='%23ffffff' stroke-opacity='0.75' stroke-width='1'/%3E%3Ccircle cx='12' cy='5.2' r='1.3' fill='%23ffffff' fill-opacity='0.85'/%3E%3C/svg%3E");
+      pointer-events: none;
+    }
+
+    /* 四隅の十字架装飾 */
+    .corner-cross {
+      position: absolute;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.72);
+      text-shadow: 0 0 6px var(--pink);
+      pointer-events: none;
+      z-index: 4;
+      line-height: 1;
+    }
+
+    /* =========================================================================
+     * 4. タイトルロゴ（極太袋文字・クローム・グリッチ）＆ステッカー
+     * ======================================================================= */
+    .logo-chrome {
+      font-family: 'Mochiy Pop One', sans-serif;
+      background: linear-gradient(180deg, #ffffff 0%, #ffd1ec 36%, #ff1e8e 68%, #b429ff 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      -webkit-text-stroke: 1.5px #ffffff;
+      filter:
+        drop-shadow(0 0 8px rgba(255, 30, 142, 0.95))
+        drop-shadow(0 4px 0 #4d002b)
+        drop-shadow(0 0 22px rgba(0, 245, 255, 0.65));
+      position: relative;
+      display: inline-block;
+      animation: logoGlitchIdle 4.5s infinite;
+    }
+
+    @keyframes logoGlitchIdle {
+      0%, 91%, 100% { transform: translate(0, 0) skew(0deg); filter: drop-shadow(0 0 8px rgba(255,30,142,0.95)) drop-shadow(0 4px 0 #4d002b); }
+      93% { transform: translate(-3px, 1px) skew(-4deg); filter: drop-shadow(3px 0 0 #00f5ff) drop-shadow(-3px 0 0 #ff1e8e); }
+      95% { transform: translate(3px, -1px) skew(3deg); filter: drop-shadow(-3px 0 0 #ccff00) drop-shadow(3px 0 0 #ff1e8e); }
+      97% { transform: translate(0, 0) skew(0deg); }
+    }
+
+    .sticker-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Orbitron', 'DotGothic16', sans-serif;
+      font-weight: 900;
+      font-size: 10px;
+      padding: 4px 10px;
+      border: 2px solid #ffffff;
+      box-shadow: 0 3px 0 rgba(0,0,0,0.8), 0 0 14px rgba(255, 30, 142, 0.7);
+      white-space: nowrap;
+    }
+
+    /* =========================================================================
+     * 5. ぷっくり3Dジェリーボタン
+     * ======================================================================= */
+    .btn-jelly {
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.12s ease;
+      border: 2.5px solid #ffffff;
+    }
+    .btn-jelly::before {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 8%;
+      right: 8%;
+      height: 38%;
+      border-radius: 999px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.04) 100%);
+      pointer-events: none;
+    }
+    .btn-jelly:hover:not(:disabled) {
+      transform: translateY(-2px) rotate(-0.6deg) scale(1.015);
+    }
+    .btn-jelly:active:not(:disabled) {
+      transform: translateY(5px) scale(0.95);
+    }
+
+    .jelly-pink {
+      background: linear-gradient(180deg, #ff69b8 0%, #ff1e8e 58%, #c90066 100%);
+      box-shadow: 0 6px 0 #6e0038, 0 0 24px rgba(255, 30, 142, 0.8);
+      color: #ffffff;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.45);
+    }
+    .jelly-pink:active:not(:disabled) { box-shadow: 0 1px 0 #6e0038, 0 0 12px rgba(255, 30, 142, 0.6); }
+
+    .jelly-purple {
+      background: linear-gradient(180deg, #d775ff 0%, #b429ff 58%, #7700c2 100%);
+      box-shadow: 0 6px 0 #420070, 0 0 22px rgba(180, 41, 255, 0.75);
+      color: #ffffff;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.45);
+    }
+    .jelly-purple:active:not(:disabled) { box-shadow: 0 1px 0 #420070; }
+
+    .jelly-cyan {
+      background: linear-gradient(180deg, #85fbff 0%, #00f5ff 58%, #00a3c4 100%);
+      box-shadow: 0 6px 0 #00546b, 0 0 22px rgba(0, 245, 255, 0.72);
+      color: #07040d;
+    }
+    .jelly-cyan:active:not(:disabled) { box-shadow: 0 1px 0 #00546b; }
+
+    .jelly-lime {
+      background: linear-gradient(180deg, #e5ff70 0%, #ccff00 58%, #8fb800 100%);
+      box-shadow: 0 6px 0 #4f6600, 0 0 22px rgba(204, 255, 0, 0.72);
+      color: #07040d;
+    }
+    .jelly-lime:active:not(:disabled) { box-shadow: 0 1px 0 #4f6600; }
+
+    /* =========================================================================
+     * 6. 虹色ホログラム・カットイン・シェイク・各種アニメーション
+     * ======================================================================= */
+    @keyframes rainbowShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .holo-rainbow {
+      background: linear-gradient(90deg, #ff1e8e, #b429ff, #00f5ff, #ccff00, #ff1e8e);
+      background-size: 300% 100%;
+      animation: rainbowShift 1.3s linear infinite;
+    }
+    .holo-border-1st {
+      border: 2px solid transparent !important;
+      background:
+        linear-gradient(#1e0830, #1e0830) padding-box,
+        linear-gradient(90deg, #ff1e8e, #ccff00, #00f5ff, #b429ff, #ff1e8e) border-box !important;
+      background-size: 100% 100%, 300% 100% !important;
+      animation: rainbowShift 1.6s linear infinite;
+      box-shadow: 0 0 14px rgba(204, 255, 0, 0.55);
+    }
+
+    @keyframes hudBounce {
+      0% { transform: scale(1); }
+      40% { transform: scale(1.16); filter: brightness(1.5); }
+      100% { transform: scale(1); filter: brightness(1); }
+    }
+    .animate-hud-pop {
+      animation: hudBounce 0.42s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* アーケード風カットイン帯 */
+    .warning-stripe {
+      background: repeating-linear-gradient(
+        -45deg,
+        #07040d 0px,
+        #07040d 16px,
+        #ff1e8e 16px,
+        #ff1e8e 32px
+      );
+    }
+
+    @keyframes cutinSlide {
+      0% { transform: translateX(-110%) skewX(-12deg); opacity: 0; }
+      16% { transform: translateX(0%) skewX(-12deg); opacity: 1; }
+      84% { transform: translateX(0%) skewX(-12deg); opacity: 1; }
+      100% { transform: translateX(115%) skewX(-12deg); opacity: 0; }
+    }
+    .animate-cutin {
+      animation: cutinSlide 1.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    @keyframes popIn {
+      0% { transform: scale(0.8); opacity: 0; }
+      65% { transform: scale(1.03); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .animate-pop-in { animation: popIn 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+
+    @keyframes countBang {
+      0% { transform: scale(0.2) rotate(-14deg); opacity: 0; }
+      55% { transform: scale(1.26) rotate(4deg); opacity: 1; }
+      100% { transform: scale(1) rotate(0deg); opacity: 1; }
+    }
+    .animate-count { animation: countBang 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+    @keyframes microShake {
+      0%, 100% { transform: translate(0, 0); }
+      25% { transform: translate(-5px, 2px); }
+      50% { transform: translate(5px, -2px); }
+      75% { transform: translate(-3px, -1px); }
+    }
+    .animate-shake { animation: microShake 0.14s ease-in-out; }
+
+    @keyframes glitchBurst {
+      0%, 100% { transform: translate(0,0) skew(0deg); filter: hue-rotate(0deg); }
+      20% { transform: translate(-10px, 3px) skew(-5deg); filter: hue-rotate(80deg) contrast(1.4); }
+      40% { transform: translate(10px, -3px) skew(5deg); filter: hue-rotate(-80deg); }
+      60% { transform: translate(-6px, 2px) skew(-2deg); }
+      80% { transform: translate(6px, -2px) skew(2deg); }
+    }
+    .animate-glitch { animation: glitchBurst 0.3s ease-in-out; }
+
+    /* Round 1 回転リング */
+    @keyframes spinCW { to { transform: rotate(360deg); } }
+    @keyframes spinCCW { to { transform: rotate(-360deg); } }
+    .ring-cw { animation: spinCW 6s linear infinite; }
+    .ring-ccw { animation: spinCCW 4s linear infinite; }
+    .ring-fever { animation-duration: 1.1s !important; }
+
+    /* Round 3 チェッカー盤面＆ターゲット */
+    .hunt-board {
+      background-color: #090312;
+      background-image:
+        linear-gradient(45deg, rgba(255, 30, 142, 0.08) 25%, transparent 25%),
+        linear-gradient(-45deg, rgba(255, 30, 142, 0.08) 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, rgba(255, 30, 142, 0.08) 75%),
+        linear-gradient(-45deg, transparent 75%, rgba(255, 30, 142, 0.08) 75%);
+      background-size: 32px 32px;
+      background-position: 0 0, 0 16px, 16px -16px, -16px 0px;
+    }
+
+    @keyframes targetPop {
+      0% { transform: translate(-50%, -50%) scale(0.1) rotate(-20deg); opacity: 0; }
+      65% { transform: translate(-50%, -50%) scale(1.16) rotate(6deg); opacity: 1; }
+      100% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; }
+    }
+    .hunt-target {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      animation: targetPop 0.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
+    /* Round 5 収束レーザーリング */
+    @keyframes laserConverge {
+      0% { transform: scale(1.7); opacity: 0.2; }
+      50% { opacity: 0.9; }
+      100% { transform: scale(0.85); opacity: 0.15; }
+    }
+    .laser-ring {
+      animation: laserConverge 1.1s ease-in-out infinite;
+    }
+
+    /* 表彰台スポットライト */
+    @keyframes spotlightSweep {
+      0%, 100% { transform: rotate(-18deg); }
+      50% { transform: rotate(18deg); }
+    }
+    .spotlight-beam {
+      position: absolute;
+      top: -40px;
+      width: 140px;
+      height: 420px;
+      background: linear-gradient(180deg, rgba(255, 30, 142, 0.38) 0%, rgba(0, 245, 255, 0.12) 60%, transparent 100%);
+      clip-path: polygon(35% 0%, 65% 0%, 100% 100%, 0% 100%);
+      transform-origin: top center;
+      pointer-events: none;
+      animation: spotlightSweep 3.8s ease-in-out infinite;
+    }
+
+    /* フローティングスタンプ */
+    @keyframes floatStamp {
+      0% { transform: translateY(0) scale(0.4) rotate(var(--rs)); opacity: 0; }
+      18% { transform: translateY(-32px) scale(1.26) rotate(var(--rm)); opacity: 1; }
+      82% { opacity: 1; }
+      100% { transform: translateY(-320px) scale(1.0) rotate(var(--re)); opacity: 0; }
+    }
+    .floating-stamp {
+      position: fixed;
+      bottom: 84px;
+      pointer-events: none;
+      z-index: 65;
+      animation: floatStamp 2.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+  </style>
+</head>
+<body class="flex flex-col min-h-[100dvh] relative">
+
+  <!-- ==================== 1. 多層サイバー背景 ==================== -->
+  <div class="bg-stage" aria-hidden="true">
+    <div class="halftone-layer"></div>
+    <div class="cyber-grid-floor"></div>
+
+    <!-- SVG浮遊地雷系モチーフ（有刺鉄線ハート・リボン・十字架・キラキラ星・安全ピン） -->
+    <svg class="svg-motif w-14 h-14" style="top: 9%; left: 4%; animation-duration: 5.2s;" viewBox="0 0 64 64" fill="none">
+      <path d="M32 54 C32 54 8 38 8 21 C8 13 14 8 21 8 C26 8 30 11 32 15 C34 11 38 8 43 8 C50 8 56 13 56 21 C56 38 32 54 32 54Z" stroke="#ff1e8e" stroke-width="3" fill="rgba(255,30,142,0.18)"/>
+      <path d="M6 26 L58 34 M18 22 L14 32 M32 24 L29 36 M46 27 L43 37" stroke="#00f5ff" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+
+    <svg class="svg-motif w-12 h-12" style="top: 16%; right: 5%; animation-duration: 6.0s; animation-delay: 0.6s;" viewBox="0 0 64 64" fill="none">
+      <path d="M32 28 C20 14 6 18 10 30 C13 38 24 36 32 32 C40 36 51 38 54 30 C58 18 44 14 32 28Z" fill="rgba(255,30,142,0.28)" stroke="#ffffff" stroke-width="2.5"/>
+      <path d="M28 33 L18 54 M36 33 L46 54" stroke="#ff1e8e" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="32" cy="31" r="5" fill="#00f5ff" stroke="#ffffff" stroke-width="2"/>
+    </svg>
+
+    <svg class="svg-motif w-10 h-10" style="top: 42%; left: 3%; animation-duration: 4.8s; animation-delay: 1.1s;" viewBox="0 0 48 48" fill="none">
+      <path d="M24 4 V44 M11 16 H37" stroke="#b429ff" stroke-width="4" stroke-linecap="round"/>
+      <path d="M24 4 V44 M11 16 H37" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round"/>
+    </svg>
+
+    <svg class="svg-motif w-11 h-11" style="top: 56%; right: 4%; animation-duration: 5.5s; animation-delay: 0.3s;" viewBox="0 0 48 48" fill="none">
+      <path d="M24 3 L28 19 L45 24 L28 29 L24 45 L20 29 L3 24 L20 19 Z" fill="rgba(204,255,0,0.25)" stroke="#ccff00" stroke-width="2.2"/>
+    </svg>
+
+    <svg class="svg-motif w-12 h-12" style="bottom: 18%; left: 7%; animation-duration: 6.4s; animation-delay: 1.4s;" viewBox="0 0 64 64" fill="none">
+      <rect x="16" y="10" width="32" height="12" rx="6" transform="rotate(35 32 32)" stroke="#00f5ff" stroke-width="3"/>
+      <circle cx="44" cy="44" r="6" stroke="#ff1e8e" stroke-width="3"/>
+      <path d="M20 20 L40 40" stroke="#ffffff" stroke-width="2"/>
+    </svg>
+  </div>
+
+  <!-- CRTスキャンライン -->
+  <div class="crt-scanlines" aria-hidden="true"></div>
+
+  <!-- 全画面物理演算パーティクルCanvas -->
+  <canvas id="fx-canvas" class="fixed inset-0 z-50 pointer-events-none"></canvas>
+
+  <!-- ==================== 2. 最上部電光掲示板マーキー ==================== -->
+  <div class="marquee-bar font-pixel text-[#ff5eb8]">
+    <div class="marquee-track">
+      <span>★ DOPE♡JIRAI PARTY 8 ★ 脳汁ドバドバ8人対戦 /// OVERLOAD SYSTEM v8.0 /// ぴえん超えてぱおん /// 推ししか勝たん♡ /// MAX 8 PLAYERS REALTIME /// </span>
+      <span>★ DOPE♡JIRAI PARTY 8 ★ 脳汁ドバドバ8人対戦 /// OVERLOAD SYSTEM v8.0 /// ぴえん超えてぱおん /// 推ししか勝たん♡ /// MAX 8 PLAYERS REALTIME /// </span>
+    </div>
+  </div>
+
+  <!-- ==================== 3. ヘッダー & 8人サイバーID HUD ==================== -->
+  <header class="sticky top-0 z-40 bg-[#0b0414]/92 backdrop-blur-md border-b-2 border-[#ff1e8e] shadow-[0_4px_22px_rgba(255,30,142,0.4)]">
+    <div class="max-w-3xl mx-auto px-3 py-2 flex items-center justify-between gap-2">
+      <!-- 小ロゴ -->
+      <div class="flex items-center gap-2 min-w-0">
+        <div class="w-9 h-9 rounded-xl holo-rainbow p-[2px] shrink-0 shadow-[0_0_12px_#ff1e8e]">
+          <div class="w-full h-full rounded-[10px] bg-[#0b0414] flex items-center justify-center text-lg">🖤</div>
+        </div>
+        <div class="min-w-0">
+          <div class="font-cyber font-black text-sm sm:text-base tracking-wider text-white leading-none truncate">
+            DOPE<span class="text-[#ff1e8e]">♡</span>JIRAI <span class="text-[#00f5ff]">8</span>
+          </div>
+          <div class="flex items-center gap-1.5 text-[10px] font-pixel text-pink-300 mt-0.5">
+            <span id="conn-dot" class="w-2 h-2 rounded-full bg-zinc-500 inline-block"></span>
+            <span id="conn-text">OFFLINE</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右コントロール -->
+      <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+        <div id="header-room-badge" class="hidden items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#160726] border-2 border-[#00f5ff] shadow-[0_0_10px_rgba(0,245,255,0.45)]">
+          <span class="font-pixel text-[10px] text-[#ff5eb8]">ID</span>
+          <span id="header-room-code" class="font-cyber text-xs sm:text-sm font-black tracking-widest text-[#00f5ff]">----</span>
+        </div>
+
+        <button id="btn-mute" onclick="SoundFX.toggleMute()" title="効果音 ON/OFF"
+          class="w-9 h-9 rounded-xl bg-[#1b092b] hover:bg-[#31114d] border-2 border-[#ff1e8e] flex items-center justify-center text-base transition active:scale-90 shadow-[0_0_10px_rgba(255,30,142,0.45)]">
+          🔊
+        </button>
+
+        <button id="btn-leave-top" onclick="confirmLeaveRoom()" title="お部屋を出る"
+          class="hidden px-2.5 h-9 rounded-xl bg-[#2c071b] hover:bg-[#4d0b2f] text-[#ff69b8] text-xs font-black border-2 border-[#ff1e8e] transition active:scale-90">
+          退出
+        </button>
+      </div>
+    </div>
+
+    <!-- 8人ミニカードHUD（チェキ／サイバーID風） -->
+    <div id="players-top-bar" class="hidden border-t border-[#ff1e8e]/50 bg-[#080210]/95">
+      <div class="max-w-3xl mx-auto px-2 py-1.5">
+        <div id="mini-player-grid" class="grid grid-cols-4 sm:grid-cols-8 gap-1.5"></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== 4. アーケード風カットイン・オーバーレイ ==================== -->
+  <div id="cutin-overlay" class="hidden fixed inset-0 z-50 pointer-events-none flex items-center justify-center overflow-hidden bg-black/55 backdrop-blur-[2px]">
+    <div id="cutin-banner" class="w-[125%] py-5 warning-stripe border-y-4 border-white shadow-[0_0_50px_#ff1e8e] flex flex-col items-center justify-center">
+      <div class="bg-[#07040d]/95 border-y-2 border-[#00f5ff] w-full py-3 px-6 text-center shadow-[0_0_24px_rgba(0,245,255,0.5)]">
+        <div id="cutin-round" class="font-cyber font-black text-xs sm:text-sm tracking-[0.35em] text-[#ccff00]">
+          ROUND 1 // OVERLOAD
+        </div>
+        <div id="cutin-title" class="font-pop text-2xl sm:text-4xl text-white drop-shadow-[0_0_14px_#ff1e8e] mt-1">
+          💖 メンヘラ♡連打オーバーロード
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 5. メインコンテンツ ==================== -->
+  <main id="app-main" class="relative z-10 flex-1 w-full max-w-3xl mx-auto px-3 py-4 pb-28 flex flex-col justify-center">
+
+    <!-- ===== SCREEN 1: タイトル＆入室画面 ===== -->
+    <section id="screen-title" class="space-y-4 animate-pop-in">
+      <!-- ド派手ロゴ＆デコステッカー -->
+      <div class="relative text-center pt-3 pb-1">
+        <div class="flex flex-wrap items-center justify-center gap-2 mb-2">
+          <span class="sticker-badge bg-[#ff1e8e] text-white -rotate-3 rounded-lg">MAX 8P!!</span>
+          <span class="sticker-badge bg-[#ccff00] text-[#07040d] rotate-2 rounded-full">NO SERVER</span>
+          <span class="sticker-badge bg-[#00f5ff] text-[#07040d] -rotate-2 rounded-lg">FREE PLAY♡</span>
+        </div>
+
+        <h1 class="logo-chrome text-3xl sm:text-5xl leading-tight tracking-tight">
+          DOPE♡JIRAI<br class="sm:hidden"> PARTY 8
+        </h1>
+        <div class="font-cyber text-[11px] sm:text-xs font-black tracking-[0.28em] text-[#00f5ff] mt-1 drop-shadow-[0_0_8px_#00f5ff]">
+          — OVERLOAD EDITION —
+        </div>
+        <p class="text-xs sm:text-sm font-bold text-pink-200/90 mt-1.5">
+          全5ラウンド・脳汁ドバドバ対戦💉 1人でもBOTと今すぐ遊べるよ🎀
+        </p>
+      </div>
+
+      <!-- Y2KサイバーOSウィンドウ：プロフィール設定 -->
+      <div class="dope-window holo-shimmer">
+        <div class="os-titlebar">
+          <div class="flex items-center gap-2">
+            <span class="os-led"></span>
+            <span>♡ DOPE_OS v8.0.exe — PROFILE</span>
+          </div>
+          <div class="flex items-center gap-1">
+            <span class="os-btn">_</span>
+            <span class="os-btn">□</span>
+            <span class="os-btn bg-[#ff1e8e]">×</span>
+          </div>
+        </div>
+        <div class="gothic-lace-top"></div>
+        <span class="corner-cross bottom-1.5 left-2">✝</span>
+        <span class="corner-cross bottom-1.5 right-2">✝</span>
+
+        <div class="p-4 sm:p-5 space-y-4 relative z-10">
+          <div>
+            <label class="block text-xs font-pixel text-[#ff69b8] mb-1.5">✝ ニックネーム (MAX 10文字)</label>
+            <input id="input-nickname" type="text" maxlength="10" placeholder="例：ぴえん姫♡"
+              class="w-full px-4 py-3 rounded-xl bg-[#07030e] border-2 border-[#ff1e8e] focus:border-[#00f5ff] focus:shadow-[0_0_16px_rgba(0,245,255,0.55)] outline-none font-bold text-white text-base transition placeholder:text-pink-300/35" />
+          </div>
+
+          <div>
+            <label class="block text-xs font-pixel text-[#00f5ff] mb-1.5">🎀 アバターを選択</label>
+            <div id="avatar-picker" class="grid grid-cols-6 gap-2"></div>
+          </div>
+        </div>
+        <div class="checker-strip"></div>
+      </div>
+
+      <!-- Y2KサイバーOSウィンドウ：お部屋をつくる／入る -->
+      <div class="dope-window dope-window-cyan holo-shimmer">
+        <div class="os-titlebar" style="background: linear-gradient(90deg, #00f5ff 0%, #b429ff 55%, #ff1e8e 100%);">
+          <div class="flex items-center gap-2">
+            <span class="os-led" style="background:#ff1e8e; box-shadow:0 0 8px #ff1e8e;"></span>
+            <span>⚡ NETWORK_LINK.exe — P2P STAR</span>
+          </div>
+          <div class="flex items-center gap-1">
+            <span class="os-btn">_</span>
+            <span class="os-btn">□</span>
+            <span class="os-btn">×</span>
+          </div>
+        </div>
+        <span class="corner-cross bottom-1.5 left-2">✝</span>
+        <span class="corner-cross bottom-1.5 right-2">✝</span>
+
+        <div class="p-4 sm:p-5 space-y-4 relative z-10">
+          <button id="btn-create-room" onclick="createRoom(0, event)"
+            class="w-full py-4 rounded-2xl font-pop text-base sm:text-lg btn-jelly jelly-pink tracking-wide">
+            🎀 お部屋をつくる (ホスト)
+          </button>
+
+          <div class="flex items-center gap-3 text-[11px] font-pixel text-cyan-300/80">
+            <div class="flex-1 h-[1.5px] bg-gradient-to-r from-transparent via-[#ff1e8e] to-transparent"></div>
+            <span>OR 4桁コードで参戦</span>
+            <div class="flex-1 h-[1.5px] bg-gradient-to-r from-transparent via-[#00f5ff] to-transparent"></div>
+          </div>
+
+          <div class="flex flex-col sm:flex-row gap-2.5">
+            <input id="input-room-code" type="text" maxlength="4" placeholder="CODE (例: K7M2)"
+              oninput="this.value = this.value.toUpperCase().replace(/[^A-Z0-9]/g, '')"
+              class="flex-1 px-4 py-3 rounded-xl bg-[#07030e] border-2 border-[#b429ff] focus:border-[#ccff00] outline-none font-cyber font-black text-xl tracking-[0.35em] text-center text-[#ccff00] uppercase transition placeholder:text-purple-400/40 placeholder:tracking-normal placeholder:text-sm placeholder:font-sans" />
+            <button id="btn-join-room" onclick="joinRoom(event)"
+              class="sm:w-56 py-3.5 rounded-2xl font-pop text-base btn-jelly jelly-purple">
+              🖤 お部屋に入る (参加)
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 収録ミニゲーム5種プレビュー -->
+      <div class="grid grid-cols-5 gap-1.5 text-center">
+        <div class="bg-[#140622]/90 rounded-xl p-2 border border-[#ff1e8e] shadow-[0_0_10px_rgba(255,30,142,0.28)]">
+          <div class="text-xl">💖</div>
+          <div class="text-[10px] font-black text-[#ff69b8] leading-tight mt-0.5">メンヘラ<br>連打</div>
+        </div>
+        <div class="bg-[#140622]/90 rounded-xl p-2 border border-[#b429ff] shadow-[0_0_10px_rgba(180,41,255,0.28)]">
+          <div class="text-xl">😈</div>
+          <div class="text-[10px] font-black text-[#d775ff] leading-tight mt-0.5">毒色<br>トラップ</div>
+        </div>
+        <div class="bg-[#140622]/90 rounded-xl p-2 border border-[#00f5ff] shadow-[0_0_10px_rgba(0,245,255,0.28)]">
+          <div class="text-xl">💉</div>
+          <div class="text-[10px] font-black text-[#00f5ff] leading-tight mt-0.5">ドーパミン<br>ハント</div>
+        </div>
+        <div class="bg-[#140622]/90 rounded-xl p-2 border border-[#ccff00] shadow-[0_0_10px_rgba(204,255,0,0.28)]">
+          <div class="text-xl">💓</div>
+          <div class="text-[10px] font-black text-[#ccff00] leading-tight mt-0.5">ぴったんこ<br>5.00秒</div>
+        </div>
+        <div class="bg-[#140622]/90 rounded-xl p-2 border border-white/80 shadow-[0_0_10px_rgba(255,255,255,0.28)]">
+          <div class="text-xl">⚡</div>
+          <div class="text-[10px] font-black text-white leading-tight mt-0.5">電撃<br>早押し</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== SCREEN 2: ロビー待機画面 ===== -->
+    <section id="screen-lobby" class="hidden space-y-4 animate-pop-in">
+      <!-- ルームID＆招待ウィンドウ -->
+      <div class="dope-window holo-shimmer">
+        <div class="os-titlebar">
+          <div class="flex items-center gap-2">
+            <span class="os-led"></span>
+            <span>♡ LOBBY_ROOM.exe — INVITE</span>
+          </div>
+          <div class="flex items-center gap-1">
+            <span class="os-btn">_</span><span class="os-btn">□</span><span class="os-btn">×</span>
+          </div>
+        </div>
+        <div class="gothic-lace-top"></div>
+
+        <div class="p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3 relative z-10">
+          <div class="text-center sm:text-left">
+            <div class="text-[11px] font-pixel text-[#ff69b8]">✝ ROOM CODE (4桁) ✝</div>
+            <div id="lobby-room-code" class="font-cyber text-4xl font-black tracking-[0.26em] text-[#00f5ff] drop-shadow-[0_0_14px_rgba(0,245,255,0.85)]">
+              ----
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-center gap-2.5 w-full sm:w-auto">
+            <button onclick="copyInviteUrl(event)"
+              class="flex-1 sm:flex-none px-4 py-3 rounded-2xl font-black text-sm btn-jelly jelly-cyan flex items-center justify-center gap-1.5">
+              <span>🔗</span> 招待URLをコピー
+            </button>
+            <button id="btn-add-bot" onclick="addBot(event)"
+              class="hidden flex-1 sm:flex-none px-4 py-3 rounded-2xl font-black text-sm btn-jelly jelly-lime flex items-center justify-center gap-1.5">
+              <span>🤖</span> BOTを追加
+            </button>
+          </div>
+        </div>
+        <div class="checker-strip"></div>
+      </div>
+
+      <!-- メンバー一覧ウィンドウ -->
+      <div class="dope-window dope-window-cyan">
+        <div class="os-titlebar" style="background: linear-gradient(90deg, #b429ff 0%, #00f5ff 100%);">
+          <div class="flex items-center gap-2">
+            <span class="os-led"></span>
+            <span>🖤 MEMBERS.dll</span>
+          </div>
+          <span id="lobby-player-count" class="px-2 py-0.5 rounded bg-black/70 border border-white text-[#ccff00] text-[10px]">1 / 8人</span>
+        </div>
+
+        <div class="p-4 relative z-10">
+          <div id="lobby-player-list" class="grid grid-cols-2 sm:grid-cols-4 gap-2.5"></div>
+        </div>
+      </div>
+
+      <!-- スタートボタン（ホスト） / 待機表示（ゲスト） -->
+      <div id="lobby-host-controls" class="hidden space-y-2">
+        <button id="btn-start-game" onclick="hostStartGame(event)"
+          class="w-full py-4 rounded-2xl font-pop text-lg sm:text-xl btn-jelly jelly-pink tracking-wider">
+          ⚡ ゲームスタート！（全5ラウンド）
+        </button>
+        <p class="text-center text-xs font-bold text-pink-200/80">
+          1人でも「🤖 BOTを追加」すれば最大8人対戦がすぐ遊べるよ🖤
+        </p>
+      </div>
+
+      <div id="lobby-guest-wait" class="hidden dope-window p-4 text-center">
+        <div class="text-sm font-black text-[#00f5ff] animate-pulse">
+          🎀 ホストがゲームをはじめるのを待ってるよ…♡
+        </div>
+        <div class="text-xs font-bold text-pink-300/80 mt-1">
+          下のスタンプを連打して画面をデコろう😈
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== SCREEN 3: ラウンドイントロ＆カウントダウン ===== -->
+    <section id="screen-intro" class="hidden text-center animate-pop-in">
+      <div class="dope-window holo-shimmer">
+        <div class="os-titlebar">
+          <div class="flex items-center gap-2">
+            <span class="os-led"></span>
+            <span id="intro-os-label">⚡ LOADING_ROUND.exe</span>
+          </div>
+          <div class="flex items-center gap-1"><span class="os-btn">_</span><span class="os-btn">□</span><span class="os-btn">×</span></div>
+        </div>
+        <div class="gothic-lace-top"></div>
+
+        <div class="p-6 sm:p-8 space-y-3 relative z-10">
+          <div id="intro-round-badge" class="inline-block px-4 py-1 rounded-full bg-black border-2 border-[#ccff00] text-[#ccff00] font-cyber font-black text-xs tracking-widest shadow-[0_0_12px_rgba(204,255,0,0.5)]">
+            ROUND 1 / 5
+          </div>
+          <div id="intro-icon" class="text-6xl drop-shadow-[0_0_16px_#ff1e8e]">💖</div>
+          <h2 id="intro-title" class="font-pop text-2xl sm:text-3xl text-white drop-shadow-[0_0_12px_#ff1e8e]">
+            メンヘラ♡連打オーバーロード
+          </h2>
+          <p id="intro-desc" class="text-xs sm:text-sm font-bold text-pink-100 max-w-md mx-auto leading-relaxed">
+            説明文
+          </p>
+          <div class="pt-2">
+            <div id="intro-countdown" class="font-cyber font-black text-7xl text-[#00f5ff] animate-count drop-shadow-[0_0_24px_#00f5ff]">
+              3
+            </div>
+          </div>
+        </div>
+        <div class="checker-strip"></div>
+      </div>
+    </section>
+
+    <!-- ===== SCREEN 4: ゲームプレイ画面（5ラウンド共通） ===== -->
+    <section id="screen-game" class="hidden space-y-3">
+      <!-- ラウンド情報＆タイマーバー -->
+      <div class="flex items-center justify-between gap-2 px-1">
+        <div class="flex items-center gap-2 min-w-0">
+          <span id="game-round-pill" class="px-3 py-1 rounded-xl bg-[#ff1e8e] border-2 border-white text-white font-cyber font-black text-xs shadow-[0_0_12px_#ff1e8e] shrink-0">R1</span>
+          <span id="game-title-label" class="font-pop text-white text-xs sm:text-base truncate drop-shadow-[0_0_6px_#ff1e8e]">メンヘラ♡連打オーバーロード</span>
+        </div>
+        <div class="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[#07030e] border-2 border-[#00f5ff] shadow-[0_0_14px_rgba(0,245,255,0.5)] shrink-0">
+          <span class="text-xs">⏱️</span>
+          <span id="game-timer-text" class="font-cyber font-black text-sm sm:text-base text-[#00f5ff]">10.0s</span>
+        </div>
+      </div>
+
+      <!-- ===== ROUND 1: メンヘラ♡連打オーバーロード (10s) ===== -->
+      <div id="game-r1" class="hidden space-y-3">
+        <!-- フィーバーゲージ -->
+        <div id="r1-fever-card" class="dope-window p-3 space-y-1.5 transition-all">
+          <div class="flex items-center justify-between text-xs font-cyber font-black">
+            <span class="text-[#ff69b8]">⚡ REACTOR OVERLOAD</span>
+            <span id="r1-fever-label" class="text-[#ccff00]">0%</span>
+          </div>
+          <div class="w-full h-4 rounded-full bg-black border-2 border-[#ff1e8e]/70 overflow-hidden p-0.5">
+            <div id="r1-fever-bar" class="h-full rounded-full transition-all duration-100 bg-gradient-to-r from-[#ff1e8e] to-[#b429ff]" style="width:0%"></div>
+          </div>
+        </div>
+
+        <!-- リアルタイム連打ランキング -->
+        <div class="dope-window dope-window-cyan p-3 space-y-1.5">
+          <div class="flex justify-between text-[10px] font-pixel text-[#00f5ff]">
+            <span>🖤 LIVE OVERLOAD RACE</span>
+            <span>TAPS</span>
+          </div>
+          <div id="r1-race-bars" class="space-y-1.5"></div>
+        </div>
+
+        <!-- 中央：巨大SVGネオンハート・リアクター＋回転二重サイバーリング -->
+        <div class="relative flex flex-col items-center justify-center py-3">
+          <div class="relative w-60 h-60 sm:w-64 sm:h-64 flex items-center justify-center">
+            <!-- 外周回転リング1 -->
+            <svg id="r1-ring-outer" class="absolute inset-0 w-full h-full ring-cw pointer-events-none" viewBox="0 0 240 240">
+              <circle cx="120" cy="120" r="112" fill="none" stroke="#00f5ff" stroke-width="2.5" stroke-dasharray="18 10 4 10" opacity="0.85"/>
+              <circle cx="120" cy="120" r="102" fill="none" stroke="#ff1e8e" stroke-width="1.5" stroke-dasharray="6 14" opacity="0.7"/>
+            </svg>
+            <!-- 内周逆回転リング2 -->
+            <svg id="r1-ring-inner" class="absolute inset-3 w-[calc(100%-24px)] h-[calc(100%-24px)] ring-ccw pointer-events-none" viewBox="0 0 200 200">
+              <circle cx="100" cy="100" r="90" fill="none" stroke="#ccff00" stroke-width="2" stroke-dasharray="28 16" opacity="0.8"/>
+            </svg>
+
+            <!-- 連打リアクターボタン -->
+            <button id="r1-tap-btn"
+              class="tap-target relative w-44 h-44 sm:w-48 sm:h-48 rounded-full flex flex-col items-center justify-center transition-transform duration-75 active:scale-90 select-none focus:outline-none">
+              <svg id="r1-heart-svg" class="w-44 h-44 sm:w-48 sm:h-48 drop-shadow-[0_0_22px_#ff1e8e] transition-transform duration-75" viewBox="0 0 180 180">
+                <defs>
+                  <linearGradient id="heartGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#ff7ac3"/>
+                    <stop offset="48%" stop-color="#ff1e8e"/>
+                    <stop offset="100%" stop-color="#b429ff"/>
+                  </linearGradient>
+                </defs>
+                <path d="M90 156 C90 156 18 112 18 62 C18 36 38 20 60 20 C75 20 85 28 90 39 C95 28 105 20 120 20 C142 20 162 36 162 62 C162 112 90 156 90 156Z"
+                  fill="url(#heartGrad)" stroke="#ffffff" stroke-width="5"/>
+                <!-- ハイライト -->
+                <path d="M40 52 C42 38 56 32 68 36" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" opacity="0.8"/>
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                <span id="r1-fever-tag" class="hidden font-cyber font-black text-[11px] bg-[#ccff00] text-black px-2 py-0.5 rounded-full animate-bounce mb-0.5">FEVER!!</span>
+                <span class="font-cyber font-black text-xs text-white tracking-widest drop-shadow">MASH♡</span>
+                <span id="r1-my-count" class="font-cyber font-black text-4xl text-[#ccff00] drop-shadow-[0_2px_6px_#000]">0</span>
+              </div>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== ROUND 2: 毒色♡カラー・トラップ (15s) ===== -->
+      <div id="game-r2" class="hidden">
+        <div class="dope-window holo-shimmer">
+          <div class="os-titlebar" style="background: linear-gradient(90deg, #b429ff 0%, #ff1e8e 100%);">
+            <div class="flex items-center gap-2">
+              <span class="os-led"></span>
+              <span>👁️ SURVEILLANCE_CAM_02.exe</span>
+            </div>
+            <span id="r2-score-hud" class="font-cyber text-[#ccff00]">0 pt</span>
+          </div>
+
+          <div class="p-4 sm:p-5 text-center space-y-4 relative z-10">
+            <!-- コンボ＆倍率バッジ -->
+            <div class="flex items-center justify-between text-xs font-cyber">
+              <span class="px-2.5 py-1 rounded-lg bg-black border border-[#ff1e8e] text-[#ff69b8]">15s SCORE ATTACK</span>
+              <span id="r2-combo-badge" class="px-3 py-1 rounded-lg bg-black border border-[#ccff00] text-[#ccff00] font-black">COMBO 0 (x1.0)</span>
+            </div>
+
+            <!-- ランダム切替お題バッジ -->
+            <div id="r2-instruction" class="py-2.5 px-4 rounded-xl border-2 font-pop text-sm sm:text-base transition-all">
+              文字の【色】を選んで！
+            </div>
+
+            <!-- 監視モニター風ワードボックス -->
+            <div id="r2-monitor" class="relative py-7 rounded-2xl bg-[#05020a] border-2 border-[#00f5ff] shadow-[inset_0_0_28px_rgba(0,245,255,0.22)] overflow-hidden">
+              <div class="absolute top-1.5 left-2.5 font-pixel text-[10px] text-[#00f5ff]/75">● REC</div>
+              <div class="absolute top-1.5 right-2.5 font-pixel text-[10px] text-[#ff1e8e]/75">TRAP_SYS</div>
+              <div id="r2-word-text" class="font-pop text-5xl sm:text-6xl tracking-widest">ピンク</div>
+            </div>
+
+            <!-- 4色ネオン選択ボタン -->
+            <div id="r2-choices" class="grid grid-cols-2 gap-3"></div>
+          </div>
+          <div class="checker-strip"></div>
+        </div>
+      </div>
+
+      <!-- ===== ROUND 3: キラキラ♡ドーパミン・ハント (12s) ===== -->
+      <div id="game-r3" class="hidden">
+        <div class="dope-window dope-window-cyan">
+          <div class="os-titlebar" style="background: linear-gradient(90deg, #00f5ff 0%, #ff1e8e 100%);">
+            <div class="flex items-center gap-2">
+              <span class="os-led"></span>
+              <span>💉 DOPAMINE_ARCADE.exe</span>
+            </div>
+            <span class="font-cyber font-black text-[#ccff00]"><span id="r3-score-text">0</span> pt</span>
+          </div>
+
+          <div class="p-3 space-y-2.5 relative z-10">
+            <div class="flex flex-wrap items-center justify-center gap-1.5 text-[11px] font-black">
+              <span class="px-2 py-0.5 rounded-full bg-black border border-[#ff1e8e] text-pink-200">♡🎀🍓 +10pt</span>
+              <span class="px-2 py-0.5 rounded-full bg-black border border-[#ccff00] text-[#ccff00]">👑 激レア +35pt</span>
+              <span class="px-2 py-0.5 rounded-full bg-black border border-[#b429ff] text-purple-300">💀 毒罠 -20pt</span>
+            </div>
+
+            <!-- チェッカー＋ネオンレーザー枠盤面 -->
+            <div id="r3-arena"
+              class="hunt-board relative w-full h-[320px] sm:h-[360px] rounded-2xl border-2 border-[#00f5ff] shadow-[0_0_20px_rgba(0,245,255,0.35),inset_0_0_32px_rgba(255,30,142,0.28)] overflow-hidden">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== ROUND 4: ぴったんこ♡5.00秒 ===== -->
+      <div id="game-r4" class="hidden">
+        <div class="dope-window holo-shimmer">
+          <div class="os-titlebar">
+            <div class="flex items-center gap-2">
+              <span class="os-led"></span>
+              <span>💓 HEARTBEAT_CLOCK.exe</span>
+            </div>
+            <span class="font-cyber text-[10px]">TARGET: 5.00s</span>
+          </div>
+
+          <div class="p-5 sm:p-7 text-center space-y-5 relative z-10">
+            <div class="text-xs sm:text-sm font-bold text-pink-100">
+              1.80秒で液晶がノイズに隠れ、<span class="text-[#ff69b8]">ネオン心電図</span>だけになるよ💓<br>
+              脳内で数えて<span class="text-[#ccff00] font-black text-base"> ちょうど 5.00秒 </span>でSTOP！
+            </div>
+
+            <!-- デジタル液晶＋リアルタイムECG波形Canvas -->
+            <div class="relative rounded-2xl bg-[#05020a] border-2 border-[#ff1e8e] shadow-[0_0_24px_rgba(255,30,142,0.45),inset_0_0_24px_rgba(180,41,255,0.3)] overflow-hidden h-36 flex flex-col items-center justify-center">
+              <!-- 心電図Canvas（1.8秒後に表示） -->
+              <canvas id="r4-ecg-canvas" class="hidden absolute inset-0 w-full h-full"></canvas>
+
+              <div id="r4-clock" class="relative z-10 font-cyber font-black text-5xl sm:text-6xl text-[#00f5ff] tracking-wider drop-shadow-[0_0_16px_#00f5ff]">
+                0.00
+              </div>
+              <div id="r4-sub-hint" class="relative z-10 font-pixel text-xs text-[#ff69b8] mt-1">
+                COUNTING...
+              </div>
+            </div>
+
+            <button id="r4-stop-btn"
+              class="tap-target w-full max-w-xs mx-auto py-4 rounded-2xl font-pop text-xl sm:text-2xl btn-jelly jelly-lime">
+              ⏹️ STOP!! ♡
+            </button>
+
+            <div id="r4-result-box" class="hidden space-y-1 animate-pop-in">
+              <div class="text-xs font-pixel text-pink-300">YOUR RECORD</div>
+              <div id="r4-my-record" class="font-cyber text-3xl font-black text-[#ccff00]">5.00s</div>
+              <div id="r4-my-diff" class="text-sm font-black text-[#00f5ff]">誤差 ±0.00秒</div>
+              <div class="text-xs font-bold text-pink-300/80 pt-1">みんなの結果を待ってるよ…</div>
+            </div>
+          </div>
+          <div class="checker-strip"></div>
+        </div>
+      </div>
+
+      <!-- ===== ROUND 5: 電撃♡病みかわ早押し ===== -->
+      <div id="game-r5" class="hidden">
+        <div id="r5-arena"
+          class="tap-target relative rounded-3xl overflow-hidden min-h-[340px] flex flex-col items-center justify-center text-center border-4 border-[#ff1e8e] shadow-[0_0_32px_rgba(255,30,142,0.5)] cursor-pointer bg-[#10041c]">
+          <!-- 上下警戒テープ -->
+          <div class="warning-stripe h-5 w-full absolute top-0 left-0 border-b-2 border-white/60"></div>
+          <div class="warning-stripe h-5 w-full absolute bottom-0 left-0 border-t-2 border-white/60"></div>
+
+          <!-- 待機中の収束レーザー照準リング -->
+          <div id="r5-laser-wrap" class="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div class="w-48 h-48 rounded-full border-2 border-[#00f5ff] laser-ring"></div>
+            <div class="w-32 h-32 rounded-full border-2 border-[#ff1e8e] absolute laser-ring" style="animation-delay:0.45s;"></div>
+          </div>
+
+          <!-- NOW時のネオン稲妻SVGフラッシュ -->
+          <svg id="r5-lightning-svg" class="hidden absolute inset-0 w-full h-full pointer-events-none opacity-90" viewBox="0 0 400 340" preserveAspectRatio="none">
+            <path d="M60 0 L130 130 L95 140 L190 340" stroke="#ccff00" stroke-width="6" fill="none" filter="drop-shadow(0 0 12px #ccff00)"/>
+            <path d="M330 0 L260 125 L295 135 L210 340" stroke="#00f5ff" stroke-width="6" fill="none" filter="drop-shadow(0 0 12px #00f5ff)"/>
+          </svg>
+
+          <div class="relative z-10 px-6">
+            <div id="r5-icon" class="text-6xl mb-2">🖤</div>
+            <div id="r5-main-text" class="font-pop text-3xl sm:text-5xl text-[#ff69b8] drop-shadow-[0_0_12px_#ff1e8e]">まって…♡</div>
+            <div id="r5-sub-text" class="text-xs sm:text-sm font-bold text-pink-200 mt-3">
+              稲妻フラッシュとともに「NOW!! 押せ♡」が出たら最速タップ！
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== SCREEN 5: ラウンド間リザルト ===== -->
+    <section id="screen-round-result" class="hidden animate-pop-in">
+      <div class="dope-window holo-shimmer">
+        <div class="os-titlebar">
+          <div class="flex items-center gap-2">
+            <span class="os-led"></span>
+            <span id="rr-badge">ROUND 1 RESULT</span>
+          </div>
+          <div class="flex items-center gap-1"><span class="os-btn">_</span><span class="os-btn">□</span><span class="os-btn">×</span></div>
+        </div>
+        <div class="gothic-lace-top"></div>
+
+        <div class="p-4 sm:p-5 space-y-4 relative z-10">
+          <h2 id="rr-title" class="text-center font-pop text-xl sm:text-2xl text-white drop-shadow-[0_0_10px_#ff1e8e]">
+            💖 メンヘラ♡連打オーバーロード
+          </h2>
+
+          <div id="rr-list" class="space-y-2"></div>
+
+          <div class="pt-2 flex flex-col items-center gap-2">
+            <div id="rr-auto-text" class="font-cyber text-xs font-black text-[#ccff00]">
+              NEXT ROUND IN 4s...
+            </div>
+            <button id="btn-next-round" onclick="hostForceNext(event)"
+              class="hidden w-full sm:w-auto px-8 py-3 rounded-2xl font-pop text-base btn-jelly jelly-pink">
+              次へすすむ ⚡
+            </button>
+          </div>
+        </div>
+        <div class="checker-strip"></div>
+      </div>
+    </section>
+
+    <!-- ===== SCREEN 6: 最終表彰台（スポットライト＋アクリルスタンド風プレート） ===== -->
+    <section id="screen-final" class="hidden space-y-5 animate-pop-in relative overflow-hidden">
+      <!-- 回転スポットライト光線 -->
+      <div class="spotlight-beam left-4 sm:left-16" aria-hidden="true"></div>
+      <div class="spotlight-beam right-4 sm:right-16" style="animation-delay: -1.9s; background: linear-gradient(180deg, rgba(0,245,255,0.34) 0%, rgba(180,41,255,0.12) 60%, transparent 100%);" aria-hidden="true"></div>
+
+      <div class="text-center space-y-1 relative z-10">
+        <div class="text-4xl drop-shadow-[0_0_18px_#ccff00]">👑🖤</div>
+        <h2 class="logo-chrome text-3xl sm:text-4xl">最終けっか発表ッ♡</h2>
+      </div>
+
+      <!-- 3段ネオン表彰台＋アクリルスタンド風プレート -->
+      <div id="final-podium" class="relative z-10 grid grid-cols-3 items-end gap-2 sm:gap-4 pt-3 px-1"></div>
+
+      <!-- 全員ランキングウィンドウ -->
+      <div class="dope-window dope-window-cyan relative z-10">
+        <div class="os-titlebar" style="background: linear-gradient(90deg, #00f5ff 0%, #b429ff 100%);">
+          <span>✝ FINAL_SCOREBOARD.log ✝</span>
+          <span class="font-cyber text-[10px]">ALL PLAYERS</span>
+        </div>
+        <div id="final-full-list" class="p-4 space-y-1.5"></div>
+      </div>
+
+      <!-- リマッチ -->
+      <div class="text-center space-y-2 relative z-10">
+        <button id="btn-rematch" onclick="hostRematch(event)"
+          class="hidden w-full py-4 rounded-2xl font-pop text-lg btn-jelly jelly-pink">
+          🔁 もう一回あそぶ（リマッチ）
+        </button>
+        <div id="final-guest-wait" class="hidden text-xs font-bold text-pink-200">
+          ホストが「もう一回あそぶ」を押すとロビーに戻るよ🎀
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== 6. 固定リアクションスタンプバー ==================== -->
+  <div id="stamp-bar" class="hidden fixed bottom-[24px] left-0 right-0 z-40 bg-[#0b0414]/94 backdrop-blur-md border-t-2 border-[#ff1e8e] py-1.5 px-2 shadow-[0_-4px_20px_rgba(255,30,142,0.35)]">
+    <div class="max-w-lg mx-auto grid grid-cols-8 gap-1 sm:gap-1.5">
+      <button onclick="sendStamp('🖤', event)" class="py-1 rounded-xl bg-[#1c092b] hover:bg-[#381054] border border-[#ff1e8e]/60 text-xl sm:text-2xl transition active:scale-90">🖤</button>
+      <button onclick="sendStamp('🎀', event)" class="py-1 rounded-xl bg-[#1c092b] hover:bg-[#381054] border border-[#ff1e8e]/60 text-xl sm:text-2xl transition active:scale-90">🎀</button>
+      <button onclick="sendStamp('💘', event)" class="py-1 rounded-xl bg-[#1c092b] hover:bg-[#381054] border border-[#ff1e8e]/60 text-xl sm:text-2xl transition active:scale-90">💘</button>
+      <button onclick="sendStamp('😈', event)" class="py-1 rounded-xl bg-[#1c092b] hover:bg-[#381054] border border-[#b429ff]/60 text-xl sm:text-2xl transition active:scale-90">😈</button>
+      <button onclick="sendStamp('🥺', event)" class="py-1 rounded-xl bg-[#1c092b] hover:bg-[#381054] border border-[#00f5ff]/60 text-xl sm:text-2xl transition active:scale-90">🥺</button>
+      <button onclick="sendStamp('💉', event)" class="py-1 rounded-xl bg-[#1c092b] hover:bg-[#381054] border border-[#00f5ff]/60 text-xl sm:text-2xl transition active:scale-90">💉</button>
+      <button onclick="sendStamp('💀', event)" class="py-1 rounded-xl bg-[#1c092b] hover:bg-[#381054] border border-[#ccff00]/60 text-xl sm:text-2xl transition active:scale-90">💀</button>
+      <button onclick="sendStamp('✨', event)" class="py-1 rounded-xl bg-[#1c092b] hover:bg-[#381054] border border-[#ccff00]/60 text-xl sm:text-2xl transition active:scale-90">✨</button>
+    </div>
+  </div>
+
+  <!-- ==================== 7. 最下部電光掲示板マーキー ==================== -->
+  <div class="marquee-bar marquee-bar-bottom font-pixel text-[#00f5ff]">
+    <div class="marquee-track marquee-track-rev">
+      <span>★ DOPE♡JIRAI PARTY 8 ★ 脳汁ドバドバ8人対戦 /// OVERLOAD SYSTEM /// ぴえん超えてぱおん /// TAP TO FEVER!! /// 病みかわ最強決定戦 /// </span>
+      <span>★ DOPE♡JIRAI PARTY 8 ★ 脳汁ドバドバ8人対戦 /// OVERLOAD SYSTEM /// ぴえん超えてぱおん /// TAP TO FEVER!! /// 病みかわ最強決定戦 /// </span>
+    </div>
+  </div>
+
+  <!-- ==================== 8. トースト & カスタムモーダル ==================== -->
+  <div id="toast-container" class="fixed top-20 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center gap-2 pointer-events-none w-[90%] max-w-sm"></div>
+
+  <div id="modal-overlay" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="dope-window max-w-sm w-full animate-pop-in">
+      <div class="os-titlebar">
+        <span id="modal-title">♡ SYSTEM_ALERT.exe</span>
+        <span class="os-btn bg-[#ff1e8e]">×</span>
+      </div>
+      <div class="p-5 space-y-4">
+        <p id="modal-msg" class="text-sm font-bold text-pink-100 text-center leading-relaxed"></p>
+        <div class="flex gap-2.5 pt-1">
+          <button id="modal-cancel" class="flex-1 py-3 rounded-xl bg-[#1a0828] border-2 border-pink-400/50 font-black text-pink-200 text-sm transition active:scale-95">キャンセル</button>
+          <button id="modal-ok" class="flex-1 py-3 rounded-xl font-black text-sm btn-jelly jelly-pink">OK♡</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== メインJavaScript ==================== -->
+  <script>
+    'use strict';
+
+    /* ========================================================================
+     * 1. 定数 & 5ラウンド定義
+     * ====================================================================== */
+    const PEER_PREFIX = 'dj8-room-';
+    const MAX_PLAYERS = 8;
+    const AVATARS = ['🖤', '🎀', '🐰', '😈', '💉', '✝️', '💀', '🩹', '🧸', '🦋', '🍓', '👑'];
+    const BOT_NAMES = ['ぴえん丸', '闇うさぎ', '推ししか勝たん', '量産ちゃん', '地雷姫', 'メンヘラ猫', '病みクマ', 'めろりん'];
+    const RANK_POINTS = [1000, 850, 700, 600, 500, 400, 300, 200];
+
+    const ROUNDS = [
+      {
+        num: 1,
+        icon: '💖',
+        title: 'メンヘラ♡連打オーバーロード',
+        desc: '10秒間、中央のネオンハート・リアクターを限界まで連打！ゲージ満タンでOVERLOAD FEVER!!',
+        duration: 10000
+      },
+      {
+        num: 2,
+        icon: '😈',
+        title: '毒色♡カラー・トラップ',
+        desc: '15秒間スコアアタック！毎回切り替わる【色】か【言葉】の指示を見て爆速回答！コンボで倍率UP！',
+        duration: 15000
+      },
+      {
+        num: 3,
+        icon: '💉',
+        title: 'キラキラ♡ドーパミン・ハント',
+        desc: '12秒間、盤面に飛び出すターゲットを連射タップ！激レア👑は+35pt、毒罠💀は-20pt！',
+        duration: 12000
+      },
+      {
+        num: 4,
+        icon: '💓',
+        title: 'ぴったんこ♡5.00秒',
+        desc: '1.8秒後に液晶が消えてネオン心電図だけになるよ！脳内カウントでぴったり5.00秒を狙え！',
+        duration: 10000
+      },
+      {
+        num: 5,
+        icon: '⚡',
+        title: '電撃♡病みかわ早押し',
+        desc: '警戒テープとレーザー照準に集中！「NOW!! 押せ♡」の稲妻フラッシュで最速タップ！お手付き0点！',
+        duration: 9500
+      }
+    ];
+
+    const NEON_COLORS = [
+      { id: 'pink',   label: 'ピンク',   hex: '#ff1e8e', btnClass: 'jelly-pink' },
+      { id: 'cyan',   label: 'シアン',   hex: '#00f5ff', btnClass: 'jelly-cyan' },
+      { id: 'purple', label: 'パープル', hex: '#c84dff', btnClass: 'jelly-purple' },
+      { id: 'lime',   label: 'ライム',   hex: '#ccff00', btnClass: 'jelly-lime' }
+    ];
+
+    const HUNT_ITEMS = [
+      { emoji: '♡',  pts: 10,  weight: 28, color: '#ff1e8e', cls: 'bg-[#2a061b] border-[#ff1e8e] text-[#ff5eb8] shadow-[0_0_16px_#ff1e8e]' },
+      { emoji: '🎀', pts: 10,  weight: 25, color: '#ff69b8', cls: 'bg-[#280828] border-[#ff69b8] shadow-[0_0_16px_#ff69b8]' },
+      { emoji: '🍓', pts: 10,  weight: 22, color: '#00f5ff', cls: 'bg-[#08222a] border-[#00f5ff] shadow-[0_0_16px_#00f5ff]' },
+      { emoji: '👑', pts: 35,  weight: 10, color: '#ccff00', cls: 'holo-rainbow border-white shadow-[0_0_26px_#ccff00] scale-110' },
+      { emoji: '💀', pts: -20, weight: 15, color: '#b429ff', cls: 'bg-[#1a0429] border-[#b429ff] shadow-[0_0_22px_#b429ff]' }
+    ];
+
+    /* ========================================================================
+     * 2. 全画面物理演算 Canvas パーティクルエンジン（破片・リップル・テキスト・紙吹雪）
+     * ====================================================================== */
+    const FX = (() => {
+      let canvas, ctx;
+      let w = 0, h = 0;
+      const particles = [];
+      const ripples = [];
+      const popups = [];
+      const confettis = [];
+      let confettiActiveUntil = 0;
+
+      function init() {
+        canvas = document.getElementById('fx-canvas');
+        ctx = canvas.getContext('2d');
+        resize();
+        window.addEventListener('resize', resize);
+        requestAnimationFrame(loop);
+      }
+
+      function resize() {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        w = window.innerWidth;
+        h = window.innerHeight;
+        canvas.width = w * dpr;
+        canvas.height = h * dpr;
+        canvas.style.width = w + 'px';
+        canvas.style.height = h + 'px';
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      function drawShape(p) {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.globalAlpha = Math.max(0, p.life);
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 10;
+
+        const s = p.size;
+        if (p.shape === 'heart') {
+          ctx.beginPath();
+          ctx.moveTo(0, s * 0.35);
+          ctx.bezierCurveTo(-s, -s * 0.4, -s * 0.5, -s * 1.1, 0, -s * 0.35);
+          ctx.bezierCurveTo(s * 0.5, -s * 1.1, s, -s * 0.4, 0, s * 0.35);
+          ctx.fill();
+        } else if (p.shape === 'star') {
+          ctx.beginPath();
+          for (let i = 0; i < 4; i++) {
+            const a = (i * Math.PI) / 2;
+            ctx.lineTo(Math.cos(a) * s, Math.sin(a) * s);
+            ctx.lineTo(Math.cos(a + Math.PI / 4) * s * 0.32, Math.sin(a + Math.PI / 4) * s * 0.32);
+          }
+          ctx.closePath();
+          ctx.fill();
+        } else if (p.shape === 'cross') {
+          ctx.fillRect(-s * 0.22, -s * 0.85, s * 0.44, s * 1.7);
+          ctx.fillRect(-s * 0.65, -s * 0.35, s * 1.3, s * 0.42);
+        } else {
+          ctx.fillRect(-s * 0.5, -s * 0.5, s, s);
+        }
+        ctx.restore();
+      }
+
+      function loop() {
+        ctx.clearRect(0, 0, w, h);
+
+        // 紙吹雪の継続スポーン（表彰台）
+        if (performance.now() < confettiActiveUntil && confettis.length < 110) {
+          const colors = ['#ff1e8e', '#00f5ff', '#ccff00', '#b429ff', '#ffffff'];
+          const shapes = ['heart', 'star', 'cross', 'rect'];
+          confettis.push({
+            x: Math.random() * w,
+            y: -16,
+            vx: (Math.random() - 0.5) * 2.2,
+            vy: 2.2 + Math.random() * 3.0,
+            rot: Math.random() * Math.PI * 2,
+            vrot: (Math.random() - 0.5) * 0.14,
+            size: 6 + Math.random() * 7,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            shape: shapes[Math.floor(Math.random() * shapes.length)],
+            life: 1
+          });
+        }
+
+        // リップル描画
+        for (let i = ripples.length - 1; i >= 0; i--) {
+          const r = ripples[i];
+          r.radius += r.speed;
+          r.life -= 0.045;
+          if (r.life <= 0) { ripples.splice(i, 1); continue; }
+          ctx.save();
+          ctx.beginPath();
+          ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
+          ctx.strokeStyle = r.color;
+          ctx.lineWidth = 2.8 * r.life;
+          ctx.globalAlpha = r.life;
+          ctx.shadowColor = r.color;
+          ctx.shadowBlur = 12;
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // 爆発パーティクル更新・描画
+        for (let i = particles.length - 1; i >= 0; i--) {
+          const p = particles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vy += p.gravity;
+          p.vx *= 0.96;
+          p.rot += p.vrot;
+          p.life -= p.decay;
+          if (p.life <= 0) { particles.splice(i, 1); continue; }
+          drawShape(p);
+        }
+
+        // 紙吹雪更新・描画
+        for (let i = confettis.length - 1; i >= 0; i--) {
+          const c = confettis[i];
+          c.x += c.vx + Math.sin(c.y * 0.03) * 0.8;
+          c.y += c.vy;
+          c.rot += c.vrot;
+          if (c.y > h + 30) { confettis.splice(i, 1); continue; }
+          drawShape(c);
+        }
+
+        // スコアポップアップ文字描画
+        for (let i = popups.length - 1; i >= 0; i--) {
+          const t = popups[i];
+          t.y += t.vy;
+          t.vy *= 0.94;
+          t.life -= 0.024;
+          if (t.life <= 0) { popups.splice(i, 1); continue; }
+          ctx.save();
+          ctx.globalAlpha = Math.min(1, t.life * 1.4);
+          ctx.font = `900 ${t.size}px "Orbitron", "Mochiy Pop One", sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.lineWidth = 4;
+          ctx.strokeStyle = '#07040d';
+          ctx.strokeText(t.text, t.x, t.y);
+          ctx.fillStyle = t.color;
+          ctx.shadowColor = t.color;
+          ctx.shadowBlur = 12;
+          ctx.fillText(t.text, t.x, t.y);
+          ctx.restore();
+        }
+
+        requestAnimationFrame(loop);
+      }
+
+      return {
+        init,
+        burst(x, y, count = 12, palette = ['#ff1e8e', '#00f5ff', '#ccff00', '#ffffff']) {
+          if (x == null || y == null) { x = w / 2; y = h / 2; }
+          const shapes = ['heart', 'star', 'cross', 'rect'];
+          ripples.push({ x, y, radius: 6, speed: 5.5, color: palette[0], life: 0.95 });
+          for (let i = 0; i < count; i++) {
+            const ang = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.5;
+            const spd = 2.6 + Math.random() * 6.8;
+            particles.push({
+              x, y,
+              vx: Math.cos(ang) * spd,
+              vy: Math.sin(ang) * spd - 2.2,
+              gravity: 0.22,
+              rot: Math.random() * Math.PI * 2,
+              vrot: (Math.random() - 0.5) * 0.25,
+              size: 5 + Math.random() * 7,
+              color: palette[Math.floor(Math.random() * palette.length)],
+              shape: shapes[Math.floor(Math.random() * shapes.length)],
+              life: 1,
+              decay: 0.022 + Math.random() * 0.018
+            });
+          }
+        },
+        popup(x, y, text, color = '#ccff00', size = 22) {
+          if (x == null || y == null) { x = w / 2; y = h / 2; }
+          popups.push({ x, y, vy: -3.2, text, color, size, life: 1 });
+        },
+        startConfetti(ms = 6500) {
+          confettiActiveUntil = performance.now() + ms;
+        }
+      };
+    })();
+
+    /* ========================================================================
+     * 3. Web Audio API ハイパーポップ／チップチューン・シンセ効果音
+     * ====================================================================== */
+    const SoundFX = (() => {
+      let ctx = null;
+      let muted = false;
+
+      function ensureCtx() {
+        if (!ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) ctx = new AudioCtx();
+        }
+        if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+        return ctx;
+      }
+
+      function synth(freq, type = 'square', dur = 0.12, vol = 0.09, delay = 0, slideTo = null) {
+        if (muted) return;
+        const c = ensureCtx();
+        if (!c) return;
+        try {
+          const st = c.currentTime + delay;
+          const osc = c.createOscillator();
+          const gain = c.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, st);
+          if (slideTo) osc.frequency.exponentialRampToValueAtTime(slideTo, st + dur);
+          gain.gain.setValueAtTime(0.001, st);
+          gain.gain.linearRampToValueAtTime(vol, st + 0.008);
+          gain.gain.exponentialRampToValueAtTime(0.001, st + dur);
+          osc.connect(gain);
+          gain.connect(c.destination);
+          osc.start(st);
+          osc.stop(st + dur + 0.02);
+        } catch (e) {}
+      }
+
+      return {
+        toggleMute() {
+          muted = !muted;
+          document.getElementById('btn-mute').textContent = muted ? '🔇' : '🔊';
+          showToast(muted ? '効果音をミュートにしたよ🔇' : '効果音をONにしたよ🔊');
+        },
+        click() { synth(880, 'triangle', 0.07, 0.11, 0, 1320); },
+        cutin() {
+          synth(220, 'sawtooth', 0.18, 0.1, 0, 880);
+          synth(1174.66, 'square', 0.16, 0.08, 0.12, 1567.98);
+        },
+        tapCombo(count, isFever) {
+          const base = 420 * Math.pow(1.032, Math.min(count, 48));
+          synth(base, isFever ? 'sawtooth' : 'square', 0.065, 0.075, 0, base * 1.22);
+          if (isFever && count % 4 === 0) synth(base * 1.5, 'triangle', 0.1, 0.09, 0, base * 2);
+        },
+        correct(combo = 1) {
+          const b = Math.min(combo, 8) * 55;
+          synth(660 + b, 'square', 0.08, 0.08, 0);
+          synth(990 + b, 'triangle', 0.15, 0.11, 0.05, 1320 + b);
+        },
+        wrong() {
+          synth(175, 'sawtooth', 0.24, 0.12, 0, 75);
+          synth(130, 'square', 0.2, 0.08, 0.04, 65);
+        },
+        rare() {
+          [880, 1174.66, 1567.98, 2093].forEach((f, i) => synth(f, 'triangle', 0.15, 0.11, i * 0.04));
+        },
+        countdown() { synth(523.25, 'square', 0.1, 0.085); },
+        go() {
+          synth(783.99, 'square', 0.09, 0.09, 0);
+          synth(1046.5, 'square', 0.11, 0.09, 0.05);
+          synth(1567.98, 'triangle', 0.24, 0.13, 0.11);
+        },
+        flash() { synth(1480, 'sawtooth', 0.2, 0.13, 0, 2217); },
+        stamp() { synth(1046.5, 'sine', 0.1, 0.11, 0, 1567.98); },
+        stop() { synth(880, 'triangle', 0.18, 0.12, 0, 660); },
+        fanfare() {
+          [523.25, 659.25, 783.99, 1046.5, 1318.5, 1567.98, 2093].forEach((n, i) => {
+            synth(n, i % 2 === 0 ? 'square' : 'triangle', 0.22, 0.085, i * 0.07);
+          });
+        }
+      };
+    })();
+
+    /* ========================================================================
+     * 4. アプリ状態管理 & ユーティリティ
+     * ====================================================================== */
+    const state = {
+      screen: 'title',
+      isHost: false,
+      roomCode: '',
+      myId: '',
+      myName: '',
+      myAvatar: AVATARS[0],
+      players: [],
+      prevScores: {},
+      currentRound: 0,
+      roundConfig: null,
+      isPlaying: false,
+      lastStampTime: 0
+    };
+
+    let peer = null;
+    let hostConn = null;
+    const guestConns = {};
+    let joinTimeoutId = null;
+
+    let gameTimerInterval = null;
+    let hostRoundTimeout = null;
+    let nextRoundInterval = null;
+    let r3SpawnInterval = null;
+    let botTimers = [];
+
+    const r1State = { count: 0, lastSent: 0, fever: false };
+    const r2State = { score: 0, combo: 0, currentQ: null, submitted: false };
+    const r3State = { points: 0, submitted: false };
+    const r4State = { startTime: 0, stopped: false, rafId: null, ecgActive: false, ecgX: 0, ecgPoints: [] };
+    const r5State = { phase: 'waiting', flashTime: 0, finished: false, flashTimer: null };
+
+    window.addEventListener('DOMContentLoaded', () => {
+      FX.init();
+      initAvatarPicker();
+      restoreProfile();
+      checkUrlRoomParam();
+      bindGameInputs();
+    });
+
+    function triggerShake(id = 'app-main') {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.remove('animate-shake');
+      void el.offsetWidth;
+      el.classList.add('animate-shake');
+    }
+
+    function triggerGlitch(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.classList.remove('animate-glitch');
+      void el.offsetWidth;
+      el.classList.add('animate-glitch');
+    }
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, (m) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[m]));
+    }
+
+    function initAvatarPicker() {
+      const container = document.getElementById('avatar-picker');
+      container.innerHTML = '';
+      AVATARS.forEach((emo) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = emo;
+        btn.dataset.avatar = emo;
+        btn.onclick = (e) => {
+          SoundFX.click();
+          selectAvatar(emo);
+          FX.burst(e.clientX, e.clientY, 10, ['#ff1e8e', '#00f5ff', '#ffffff']);
+        };
+        container.appendChild(btn);
+      });
+      selectAvatar(AVATARS[Math.floor(Math.random() * AVATARS.length)]);
+    }
+
+    function selectAvatar(emo) {
+      state.myAvatar = emo;
+      document.querySelectorAll('#avatar-picker button').forEach((b) => {
+        if (b.dataset.avatar === emo) {
+          b.className = 'aspect-square rounded-xl text-2xl flex items-center justify-center border-2 border-[#00f5ff] bg-[#2f0d47] scale-105 shadow-[0_0_14px_rgba(0,245,255,0.7)] transition';
+        } else {
+          b.className = 'aspect-square rounded-xl text-2xl flex items-center justify-center border-2 border-[#ff1e8e]/35 bg-[#12051d] hover:bg-[#230938] transition active:scale-90';
+        }
+      });
+    }
+
+    function restoreProfile() {
+      try {
+        const n = localStorage.getItem('dj8_name');
+        const a = localStorage.getItem('dj8_avatar');
+        if (n) document.getElementById('input-nickname').value = n;
+        if (a && AVATARS.includes(a)) selectAvatar(a);
+      } catch (e) {}
+    }
+
+    function saveProfile(name, avatar) {
+      try {
+        localStorage.setItem('dj8_name', name);
+        localStorage.setItem('dj8_avatar', avatar);
+      } catch (e) {}
+    }
+
+    function checkUrlRoomParam() {
+      const params = new URLSearchParams(window.location.search);
+      const room = params.get('room');
+      if (room) {
+        const clean = room.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4);
+        if (clean.length === 4) {
+          document.getElementById('input-room-code').value = clean;
+          showToast(`招待ルーム「${clean}」を自動入力したよ🖤`);
+        }
+      }
+    }
+
+    function generateRoomCode() {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let code = '';
+      for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)];
+      return code;
+    }
+
+    function setConnectionStatus(status, text) {
+      const dot = document.getElementById('conn-dot');
+      document.getElementById('conn-text').textContent = text;
+      dot.className = 'w-2 h-2 rounded-full inline-block ' + (
+        status === 'connected' ? 'bg-[#ccff00] shadow-[0_0_8px_#ccff00]' :
+        status === 'connecting' ? 'bg-[#00f5ff] animate-pulse' :
+        status === 'error' ? 'bg-[#ff1e8e]' : 'bg-zinc-500'
+      );
+    }
+
+    function showToast(msg, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const el = document.createElement('div');
+      const style = type === 'error'
+        ? 'bg-[#2a0417] border-[#ff1e8e] text-[#ff69b8] shadow-[0_0_16px_rgba(255,30,142,0.65)]'
+        : type === 'success'
+        ? 'bg-[#0b1f10] border-[#ccff00] text-[#ccff00] shadow-[0_0_16px_rgba(204,255,0,0.5)]'
+        : 'bg-[#0d0824] border-[#00f5ff] text-[#00f5ff] shadow-[0_0_16px_rgba(0,245,255,0.5)]';
+      el.className = `${style} text-xs sm:text-sm font-black px-4 py-2.5 rounded-xl border-2 animate-pop-in text-center`;
+      el.textContent = msg;
+      container.appendChild(el);
+      setTimeout(() => {
+        el.style.transition = 'opacity 0.25s, transform 0.25s';
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(-10px)';
+        setTimeout(() => el.remove(), 260);
+      }, 2400);
+    }
+
+    function openModal(title, msg, onOk, showCancel = true) {
+      const overlay = document.getElementById('modal-overlay');
+      document.getElementById('modal-title').textContent = title;
+      document.getElementById('modal-msg').textContent = msg;
+      const btnCancel = document.getElementById('modal-cancel');
+      const btnOk = document.getElementById('modal-ok');
+      btnCancel.classList.toggle('hidden', !showCancel);
+      overlay.classList.remove('hidden');
+      const close = () => overlay.classList.add('hidden');
+      btnCancel.onclick = () => { SoundFX.click(); close(); };
+      btnOk.onclick = () => { SoundFX.click(); close(); if (onOk) onOk(); };
+    }
+
+    function switchScreen(screenName) {
+      state.screen = screenName;
+      ['title', 'lobby', 'intro', 'game', 'round-result', 'final'].forEach((id) => {
+        document.getElementById('screen-' + id).classList.add('hidden');
+      });
+      const targetId = screenName === 'roundResult' ? 'screen-round-result' : 'screen-' + screenName;
+      document.getElementById(targetId).classList.remove('hidden');
+
+      const inRoom = screenName !== 'title';
+      document.getElementById('players-top-bar').classList.toggle('hidden', !inRoom);
+      document.getElementById('stamp-bar').classList.toggle('hidden', !inRoom);
+      document.getElementById('header-room-badge').classList.toggle('hidden', !inRoom);
+      document.getElementById('header-room-badge').classList.toggle('flex', inRoom);
+      document.getElementById('btn-leave-top').classList.toggle('hidden', !inRoom);
+    }
+
+    function getNicknameOrDefault() {
+      const raw = document.getElementById('input-nickname').value.trim();
+      return raw || ('ぴえん' + Math.floor(10 + Math.random() * 89));
+    }
+
+    /* ========================================================================
+     * 5. PeerJS WebRTC P2P スター型通信（dj8-room-XXXX）
+     * ====================================================================== */
+    function cleanupNetwork() {
+      clearAllTimers();
+      if (joinTimeoutId) { clearTimeout(joinTimeoutId); joinTimeoutId = null; }
+      Object.values(guestConns).forEach((c) => { try { c.close(); } catch (e) {} });
+      for (const k in guestConns) delete guestConns[k];
+      if (hostConn) { try { hostConn.close(); } catch (e) {} hostConn = null; }
+      if (peer) { try { peer.destroy(); } catch (e) {} peer = null; }
+    }
+
+    function createRoom(retryCount = 0, evt = null) {
+      if (evt) FX.burst(evt.clientX, evt.clientY, 14, ['#ff1e8e', '#ccff00', '#00f5ff']);
+      SoundFX.click();
+      const name = getNicknameOrDefault();
+      state.myName = name;
+      saveProfile(name, state.myAvatar);
+
+      cleanupNetwork();
+      const code = generateRoomCode();
+      state.isHost = true;
+      state.roomCode = code;
+      setConnectionStatus('connecting', 'CREATING...');
+
+      const btn = document.getElementById('btn-create-room');
+      btn.disabled = true;
+      btn.textContent = '⚡ お部屋を作成中…';
+
+      try {
+        peer = new Peer(PEER_PREFIX + code, { debug: 1 });
+      } catch (e) {
+        showToast('通信の初期化に失敗しました', 'error');
+        resetEntryButtons();
+        return;
+      }
+
+      peer.on('open', (id) => {
+        state.myId = id;
+        state.players = [{
+          id, name: state.myName, avatar: state.myAvatar,
+          isHost: true, isBot: false, score: 0,
+          roundDone: false, roundMetric: null, roundDisplay: '', tapCount: 0
+        }];
+        state.prevScores = {};
+        setConnectionStatus('connected', 'HOST ONLINE');
+        document.getElementById('header-room-code').textContent = code;
+        document.getElementById('lobby-room-code').textContent = code;
+        resetEntryButtons();
+        switchScreen('lobby');
+        renderAllPlayerViews();
+        SoundFX.correct(2);
+        showToast(`お部屋「${code}」爆誕ッ🎀`, 'success');
+      });
+
+      peer.on('connection', (conn) => setupGuestConnectionOnHost(conn));
+
+      peer.on('error', (err) => {
+        if (err.type === 'unavailable-id' && retryCount < 3) {
+          createRoom(retryCount + 1);
+          return;
+        }
+        setConnectionStatus('error', 'ERROR');
+        showToast('通信エラー: ' + (err.type || '不明'), 'error');
+        resetEntryButtons();
+      });
+
+      peer.on('disconnected', () => {
+        setConnectionStatus('error', 'RECONNECTING...');
+        if (peer && !peer.destroyed) { try { peer.reconnect(); } catch (e) {} }
+      });
+    }
+
+    function setupGuestConnectionOnHost(conn) {
+      conn.on('open', () => { guestConns[conn.peer] = conn; });
+      conn.on('data', (msg) => handleHostReceivedMessage(conn, msg));
+      conn.on('close', () => {
+        delete guestConns[conn.peer];
+        const leaving = state.players.find((p) => p.id === conn.peer);
+        if (leaving) {
+          state.players = state.players.filter((p) => p.id !== conn.peer);
+          showToast(`${leaving.avatar} ${leaving.name} が退出しました`);
+          broadcastState();
+          renderAllPlayerViews();
+          if (state.isPlaying) checkHostAllFinished();
+        }
+      });
+      conn.on('error', () => { delete guestConns[conn.peer]; });
+    }
+
+    function joinRoom(evt = null) {
+      if (evt) FX.burst(evt.clientX, evt.clientY, 12, ['#b429ff', '#00f5ff', '#ff1e8e']);
+      SoundFX.click();
+      const code = document.getElementById('input-room-code').value.trim().toUpperCase();
+      if (code.length !== 4) {
+        showToast('4文字のルームコードを入力してね🖤', 'error');
+        return;
+      }
+
+      const name = getNicknameOrDefault();
+      state.myName = name;
+      saveProfile(name, state.myAvatar);
+
+      cleanupNetwork();
+      state.isHost = false;
+      state.roomCode = code;
+      setConnectionStatus('connecting', 'CONNECTING...');
+
+      const btn = document.getElementById('btn-join-room');
+      btn.disabled = true;
+      btn.textContent = '⚡ 接続中…';
+
+      try {
+        peer = new Peer({ debug: 1 });
+      } catch (e) {
+        showToast('通信の初期化に失敗しました', 'error');
+        resetEntryButtons();
+        return;
+      }
+
+      joinTimeoutId = setTimeout(() => {
+        if (state.screen === 'title') {
+          cleanupNetwork();
+          setConnectionStatus('error', 'TIMEOUT');
+          showToast('お部屋が見つかりません🥺 コードを確認してね', 'error');
+          resetEntryButtons();
+        }
+      }, 10000);
+
+      peer.on('open', (id) => {
+        state.myId = id;
+        hostConn = peer.connect(PEER_PREFIX + code, { reliable: true });
+
+        hostConn.on('open', () => {
+          hostConn.send({ type: 'JOIN', id: state.myId, name: state.myName, avatar: state.myAvatar });
+        });
+
+        hostConn.on('data', (msg) => handleGuestReceivedMessage(msg));
+
+        hostConn.on('close', () => {
+          if (state.screen !== 'title') {
+            cleanupNetwork();
+            setConnectionStatus('error', 'DISCONNECTED');
+            switchScreen('title');
+            resetEntryButtons();
+            openModal(
+              '🥺 HOST_DISCONNECTED.exe',
+              'ホストがお部屋を閉じたか通信が途切れたよ。タイトル画面に戻ります🖤',
+              null,
+              false
+            );
+          }
+        });
+
+        hostConn.on('error', () => {
+          cleanupNetwork();
+          setConnectionStatus('error', 'ERROR');
+          showToast('ホストに接続できませんでした🥺', 'error');
+          switchScreen('title');
+          resetEntryButtons();
+        });
+      });
+
+      peer.on('error', (err) => {
+        if (joinTimeoutId) { clearTimeout(joinTimeoutId); joinTimeoutId = null; }
+        setConnectionStatus('error', 'FAILED');
+        showToast(err.type === 'peer-unavailable' ? `お部屋「${code}」が見つからないよ🥺` : '通信エラーが発生しました', 'error');
+        cleanupNetwork();
+        resetEntryButtons();
+      });
+    }
+
+    function resetEntryButtons() {
+      const b1 = document.getElementById('btn-create-room');
+      const b2 = document.getElementById('btn-join-room');
+      b1.disabled = false;
+      b1.textContent = '🎀 お部屋をつくる (ホスト)';
+      b2.disabled = false;
+      b2.textContent = '🖤 お部屋に入る (参加)';
+    }
+
+    function confirmLeaveRoom() {
+      SoundFX.click();
+      openModal(
+        '🖤 EXIT_ROOM.exe',
+        state.isHost
+          ? 'ホストが抜けるとお部屋が解散されちゃうよ！本当に退出する？'
+          : 'タイトル画面に戻ります。よろしいですか？',
+        () => {
+          cleanupNetwork();
+          setConnectionStatus('offline', 'OFFLINE');
+          switchScreen('title');
+          resetEntryButtons();
+        },
+        true
+      );
+    }
+
+    function broadcast(msg) {
+      if (!state.isHost) return;
+      Object.values(guestConns).forEach((conn) => {
+        if (conn && conn.open) { try { conn.send(msg); } catch (e) {} }
+      });
+    }
+
+    function broadcastState() {
+      broadcast({ type: 'STATE_SYNC', players: state.players, currentRound: state.currentRound });
+    }
+
+    function sendToHost(msg) {
+      if (state.isHost) {
+        handleHostReceivedMessage(null, msg);
+      } else if (hostConn && hostConn.open) {
+        try { hostConn.send(msg); } catch (e) {}
+      }
+    }
+
+    /* ========================================================================
+     * 6. メッセージハンドラ（ホスト／ゲスト）
+     * ====================================================================== */
+    function handleHostReceivedMessage(conn, msg) {
+      if (!msg || !msg.type) return;
+
+      switch (msg.type) {
+        case 'JOIN': {
+          if (state.screen !== 'lobby') {
+            conn.send({ type: 'JOIN_REJECT', reason: 'いま対戦中だよ！終わるのを待ってね🖤' });
+            return;
+          }
+          if (state.players.length >= MAX_PLAYERS) {
+            conn.send({ type: 'JOIN_REJECT', reason: 'お部屋が満員（8人）だよ🥺' });
+            return;
+          }
+          const newPlayer = {
+            id: msg.id,
+            name: String(msg.name || 'ぴえん').slice(0, 10),
+            avatar: AVATARS.includes(msg.avatar) ? msg.avatar : AVATARS[0],
+            isHost: false, isBot: false, score: 0,
+            roundDone: false, roundMetric: null, roundDisplay: '', tapCount: 0
+          };
+          state.players.push(newPlayer);
+          conn.send({ type: 'JOIN_ACCEPT', roomCode: state.roomCode, players: state.players });
+          broadcastState();
+          renderAllPlayerViews();
+          SoundFX.correct(1);
+          showToast(`${newPlayer.avatar} ${newPlayer.name} が参戦ッ💖`);
+          break;
+        }
+        case 'STAMP': {
+          broadcast(msg);
+          spawnFloatingStamp(msg.emoji, msg.name);
+          break;
+        }
+        case 'R1_TAP_UPDATE': {
+          const p = state.players.find((pl) => pl.id === msg.id);
+          if (p && state.currentRound === 1 && state.isPlaying) {
+            p.tapCount = msg.count;
+            broadcast({ type: 'R1_TAPS_SYNC', taps: state.players.map((x) => ({ id: x.id, count: x.tapCount })) });
+            renderR1Bars();
+          }
+          break;
+        }
+        case 'ROUND_SUBMIT': {
+          if (!state.isPlaying || msg.round !== state.currentRound) return;
+          const p = state.players.find((pl) => pl.id === msg.id);
+          if (p && !p.roundDone) {
+            p.roundDone = true;
+            p.roundMetric = msg.metric;
+            p.roundDisplay = msg.display;
+            if (msg.round === 1 && typeof msg.metric === 'number') p.tapCount = msg.metric;
+            broadcastState();
+            renderMiniPlayerBar();
+            checkHostAllFinished();
+          }
+          break;
+        }
+      }
+    }
+
+    function handleGuestReceivedMessage(msg) {
+      if (!msg || !msg.type) return;
+
+      switch (msg.type) {
+        case 'JOIN_ACCEPT': {
+          if (joinTimeoutId) { clearTimeout(joinTimeoutId); joinTimeoutId = null; }
+          state.players = msg.players;
+          state.prevScores = {};
+          setConnectionStatus('connected', 'ONLINE');
+          document.getElementById('header-room-code').textContent = state.roomCode;
+          document.getElementById('lobby-room-code').textContent = state.roomCode;
+          resetEntryButtons();
+          switchScreen('lobby');
+          renderAllPlayerViews();
+          SoundFX.correct(2);
+          showToast(`お部屋「${state.roomCode}」に参戦ッ🖤`, 'success');
+          break;
+        }
+        case 'JOIN_REJECT': {
+          if (joinTimeoutId) { clearTimeout(joinTimeoutId); joinTimeoutId = null; }
+          cleanupNetwork();
+          setConnectionStatus('error', 'REJECTED');
+          showToast(msg.reason || '入室できませんでした', 'error');
+          resetEntryButtons();
+          break;
+        }
+        case 'STATE_SYNC': {
+          state.players = msg.players;
+          state.currentRound = msg.currentRound;
+          renderAllPlayerViews();
+          break;
+        }
+        case 'STAMP': {
+          spawnFloatingStamp(msg.emoji, msg.name);
+          break;
+        }
+        case 'START_INTRO': {
+          state.currentRound = msg.round;
+          state.roundConfig = msg.config;
+          state.players = msg.players;
+          renderAllPlayerViews();
+          runRoundIntro(msg.round);
+          break;
+        }
+        case 'START_PLAY': {
+          state.currentRound = msg.round;
+          state.roundConfig = msg.config;
+          beginRoundPlay(msg.round);
+          break;
+        }
+        case 'R1_TAPS_SYNC': {
+          msg.taps.forEach((t) => {
+            const p = state.players.find((pl) => pl.id === t.id);
+            if (p) p.tapCount = t.count;
+          });
+          renderR1Bars();
+          break;
+        }
+        case 'ROUND_RESULT': {
+          state.players = msg.players;
+          showRoundResultScreen(msg.round, msg.rankings);
+          break;
+        }
+        case 'FINAL_RESULT': {
+          state.players = msg.players;
+          showFinalScreen();
+          break;
+        }
+        case 'RETURN_LOBBY': {
+          clearAllTimers();
+          state.players = msg.players;
+          state.currentRound = 0;
+          state.isPlaying = false;
+          switchScreen('lobby');
+          renderAllPlayerViews();
+          showToast('ロビーにもどったよ！もう一回やろ♡');
+          break;
+        }
+      }
+    }
+
+    /* ========================================================================
+     * 7. ロビー機能（招待URLコピー・BOT追加/削除・リアクションスタンプ）
+     * ====================================================================== */
+    function copyInviteUrl(evt) {
+      if (evt) FX.burst(evt.clientX, evt.clientY, 10, ['#00f5ff', '#ffffff']);
+      SoundFX.click();
+      const base = window.location.origin + window.location.pathname;
+      const url = `${base}?room=${state.roomCode}`;
+
+      const ta = document.createElement('textarea');
+      ta.value = url;
+      ta.style.position = 'fixed';
+      ta.style.left = '-9999px';
+      document.body.appendChild(ta);
+      ta.select();
+      let copied = false;
+      try { copied = document.execCommand('copy'); } catch (e) {}
+      ta.remove();
+
+      if (copied) {
+        showToast('招待URLをコピーしたよ！みんなに送ってね🔗', 'success');
+      } else if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url)
+          .then(() => showToast('招待URLをコピーしたよ🔗', 'success'))
+          .catch(() => showToast(`ルームコード「${state.roomCode}」を共有してね`));
+      } else {
+        showToast(`ルームコード「${state.roomCode}」を共有してね`);
+      }
+    }
+
+    function addBot(evt) {
+      if (!state.isHost) return;
+      if (state.players.length >= MAX_PLAYERS) {
+        showToast('もう8人満員だよ🖤', 'error');
+        return;
+      }
+      if (evt) FX.burst(evt.clientX, evt.clientY, 10, ['#ccff00', '#ff1e8e']);
+      SoundFX.click();
+      const existingNames = new Set(state.players.map((p) => p.name));
+      const availableName = BOT_NAMES.find((n) => !existingNames.has(n)) || ('BOT' + (state.players.length + 1));
+      const botAvatar = AVATARS[(state.players.length * 5 + 2) % AVATARS.length];
+      state.players.push({
+        id: 'bot-' + Date.now() + '-' + Math.floor(Math.random() * 1000),
+        name: availableName,
+        avatar: botAvatar,
+        isHost: false, isBot: true, score: 0,
+        roundDone: false, roundMetric: null, roundDisplay: '', tapCount: 0
+      });
+      broadcastState();
+      renderAllPlayerViews();
+    }
+
+    function removeBot(botId) {
+      if (!state.isHost) return;
+      SoundFX.click();
+      state.players = state.players.filter((p) => p.id !== botId);
+      broadcastState();
+      renderAllPlayerViews();
+    }
+
+    function sendStamp(emoji, evt) {
+      const now = Date.now();
+      if (now - state.lastStampTime < 260) return;
+      state.lastStampTime = now;
+      SoundFX.stamp();
+      if (evt) FX.burst(evt.clientX, evt.clientY, 8, ['#ff1e8e', '#00f5ff', '#ccff00']);
+
+      const msg = { type: 'STAMP', emoji, name: state.myName };
+      if (state.isHost) {
+        broadcast(msg);
+        spawnFloatingStamp(emoji, state.myName);
+      } else {
+        sendToHost(msg);
+      }
+    }
+
+    function spawnFloatingStamp(emoji, senderName) {
+      const el = document.createElement('div');
+      el.className = 'floating-stamp';
+      el.style.left = (10 + Math.random() * 78) + '%';
+      el.style.setProperty('--rs', (Math.random() * 26 - 13) + 'deg');
+      el.style.setProperty('--rm', (Math.random() * 18 - 9) + 'deg');
+      el.style.setProperty('--re', (Math.random() * 26 - 13) + 'deg');
+
+      el.innerHTML = `
+        <div class="relative flex items-center justify-center">
+          <span class="absolute -top-3 -right-3 text-sm text-[#ccff00] animate-ping">✦</span>
+          <span class="text-4xl sm:text-5xl drop-shadow-[0_0_14px_#ff1e8e]">${emoji}</span>
+        </div>
+        <div class="text-[10px] font-pixel font-bold bg-[#07040d]/95 text-[#00f5ff] border border-[#ff1e8e] px-2.5 py-0.5 rounded-full shadow-[0_0_10px_rgba(255,30,142,0.65)] mt-0.5 whitespace-nowrap">
+          ${escapeHtml(senderName)}
+        </div>
+      `;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 2250);
+    }
+
+    /* ========================================================================
+     * 8. 8人ミニカードHUD（チェキ／サイバーID風）＆ロビー描画
+     * ====================================================================== */
+    function renderAllPlayerViews() {
+      renderMiniPlayerBar();
+      if (state.screen === 'lobby') renderLobbyView();
+    }
+
+    function renderMiniPlayerBar() {
+      const grid = document.getElementById('mini-player-grid');
+      if (!grid) return;
+      grid.innerHTML = '';
+
+      const maxScore = Math.max(0, ...state.players.map((p) => p.score));
+
+      for (let i = 0; i < MAX_PLAYERS; i++) {
+        const p = state.players[i];
+        const card = document.createElement('div');
+        if (p) {
+          const isMe = p.id === state.myId;
+          const isFirst = p.score > 0 && p.score === maxScore;
+          const prev = state.prevScores[p.id] ?? p.score;
+          const scoredUp = p.score > prev;
+          state.prevScores[p.id] = p.score;
+
+          card.className = `relative rounded-lg px-1.5 py-1 flex flex-col items-center justify-center border transition ${
+            isFirst ? 'holo-border-1st' :
+            isMe ? 'bg-[#2a093d] border-[#00f5ff] shadow-[0_0_10px_rgba(0,245,255,0.5)]' :
+            'bg-[#130620] border-[#ff1e8e]/50'
+          } ${scoredUp ? 'animate-hud-pop' : ''}`;
+
+          card.innerHTML = `
+            ${isFirst ? '<span class="absolute -top-2 -left-1 text-xs drop-shadow-[0_0_6px_#ccff00]">👑</span>' : ''}
+            ${p.roundDone ? '<span class="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-[#ccff00] text-black text-[9px] flex items-center justify-center font-black">✓</span>' : ''}
+            <div class="flex items-center gap-0.5 w-full justify-center">
+              <span class="text-sm leading-none">${p.avatar}</span>
+              <span class="text-[9px] font-black text-white truncate max-w-[46px]">${escapeHtml(p.name)}</span>
+            </div>
+            <div class="font-cyber text-[9px] font-black ${isFirst ? 'text-[#ccff00]' : 'text-[#ff69b8]'} leading-tight">${p.score}</div>
+          `;
+        } else {
+          card.className = 'rounded-lg px-1 py-1 flex flex-col items-center justify-center border border-dashed border-pink-500/25 bg-black/40 text-pink-500/30';
+          card.innerHTML = `<span class="text-[10px]">✝</span><span class="text-[8px] font-cyber">OPEN</span>`;
+        }
+        grid.appendChild(card);
+      }
+    }
+
+    function renderLobbyView() {
+      document.getElementById('lobby-player-count').textContent = `${state.players.length} / ${MAX_PLAYERS}人`;
+      document.getElementById('btn-add-bot').classList.toggle('hidden', !state.isHost);
+      document.getElementById('lobby-host-controls').classList.toggle('hidden', !state.isHost);
+      document.getElementById('lobby-guest-wait').classList.toggle('hidden', state.isHost);
+
+      const list = document.getElementById('lobby-player-list');
+      list.innerHTML = '';
+
+      for (let i = 0; i < MAX_PLAYERS; i++) {
+        const p = state.players[i];
+        const slot = document.createElement('div');
+        if (p) {
+          const isMe = p.id === state.myId;
+          slot.className = `relative rounded-xl p-2.5 flex flex-col items-center text-center border-2 transition ${
+            isMe
+              ? 'bg-[#2a0a3d] border-[#00f5ff] shadow-[0_0_16px_rgba(0,245,255,0.45)]'
+              : 'bg-[#150724] border-[#ff1e8e]/80 shadow-[0_0_12px_rgba(255,30,142,0.28)]'
+          }`;
+          slot.innerHTML = `
+            ${p.isHost ? '<span class="absolute top-1 left-1 px-1.5 py-0.5 rounded bg-[#ccff00] text-black font-cyber text-[8px] font-black">HOST</span>' : ''}
+            ${(state.isHost && p.isBot) ? `<button onclick="removeBot('${p.id}')" class="absolute top-1 right-1 w-5 h-5 rounded bg-black border border-[#ff1e8e] hover:bg-[#ff1e8e] text-white text-[10px] font-black">✕</button>` : ''}
+            <div class="text-3xl my-1 drop-shadow-[0_0_8px_#ff1e8e]">${p.avatar}</div>
+            <div class="font-black text-xs text-white truncate w-full">${escapeHtml(p.name)}</div>
+            <div class="text-[9px] font-cyber font-black mt-0.5 ${p.isBot ? 'text-[#ccff00]' : (isMe ? 'text-[#00f5ff]' : 'text-[#ff69b8]')}">
+              ${p.isBot ? '🤖 BOT' : (isMe ? 'YOU♡' : 'READY')}
+            </div>
+          `;
+        } else {
+          slot.className = 'rounded-xl p-2.5 flex flex-col items-center justify-center text-center border-2 border-dashed border-[#b429ff]/40 bg-black/45 text-purple-300/40 min-h-[96px]';
+          slot.innerHTML = `<div class="text-lg">✝</div><div class="text-[9px] font-cyber mt-1">WAITING</div>`;
+        }
+        list.appendChild(slot);
+      }
+    }
+
+    /* ========================================================================
+     * 9. ゲーム進行コントロール＆アーケード風カットイン演出
+     * ====================================================================== */
+    function clearAllTimers() {
+      if (gameTimerInterval) { clearInterval(gameTimerInterval); gameTimerInterval = null; }
+      if (hostRoundTimeout) { clearTimeout(hostRoundTimeout); hostRoundTimeout = null; }
+      if (nextRoundInterval) { clearInterval(nextRoundInterval); nextRoundInterval = null; }
+      if (r3SpawnInterval) { clearInterval(r3SpawnInterval); r3SpawnInterval = null; }
+      if (r4State.rafId) { cancelAnimationFrame(r4State.rafId); r4State.rafId = null; }
+      if (r5State.flashTimer) { clearTimeout(r5State.flashTimer); r5State.flashTimer = null; }
+      botTimers.forEach((t) => clearTimeout(t));
+      botTimers = [];
+    }
+
+    function hostStartGame(evt) {
+      if (!state.isHost) return;
+      if (evt) FX.burst(evt.clientX, evt.clientY, 18, ['#ff1e8e', '#00f5ff', '#ccff00']);
+      SoundFX.click();
+      state.players.forEach((p) => { p.score = 0; });
+      state.prevScores = {};
+      hostLaunchRound(1);
+    }
+
+    function hostLaunchRound(roundNum) {
+      if (!state.isHost) return;
+      clearAllTimers();
+      state.currentRound = roundNum;
+      state.players.forEach((p) => {
+        p.roundDone = false;
+        p.roundMetric = null;
+        p.roundDisplay = '';
+        p.tapCount = 0;
+      });
+
+      const config = generateRoundConfig(roundNum);
+      state.roundConfig = config;
+
+      broadcast({ type: 'START_INTRO', round: roundNum, config, players: state.players });
+      renderAllPlayerViews();
+      runRoundIntro(roundNum);
+
+      // カットイン(1.6s) + カウントダウン(2.6s) = 4.2s後に開始
+      hostRoundTimeout = setTimeout(() => {
+        broadcast({ type: 'START_PLAY', round: roundNum, config });
+        beginRoundPlay(roundNum);
+        scheduleBotsForRound(roundNum, config);
+
+        const maxMs = ROUNDS[roundNum - 1].duration;
+        hostRoundTimeout = setTimeout(() => {
+          hostFinishRound();
+        }, maxMs + 500);
+      }, 4200);
+    }
+
+    function generateRoundConfig(roundNum) {
+      if (roundNum === 5) {
+        return { delayMs: 2200 + Math.floor(Math.random() * 3000) };
+      }
+      return {};
+    }
+
+    function playCutin(roundNum) {
+      const info = ROUNDS[roundNum - 1];
+      const overlay = document.getElementById('cutin-overlay');
+      const banner = document.getElementById('cutin-banner');
+      document.getElementById('cutin-round').textContent = `ROUND ${roundNum} / 5 // OVERLOAD`;
+      document.getElementById('cutin-title').textContent = `${info.icon} ${info.title}`;
+
+      overlay.classList.remove('hidden');
+      banner.classList.remove('animate-cutin');
+      void banner.offsetWidth;
+      banner.classList.add('animate-cutin');
+      SoundFX.cutin();
+
+      setTimeout(() => {
+        overlay.classList.add('hidden');
+      }, 1780);
+    }
+
+    function runRoundIntro(roundNum) {
+      const info = ROUNDS[roundNum - 1];
+      document.getElementById('intro-os-label').textContent = `⚡ LOADING_ROUND_0${roundNum}.exe`;
+      document.getElementById('intro-round-badge').textContent = `ROUND ${roundNum} / 5`;
+      document.getElementById('intro-icon').textContent = info.icon;
+      document.getElementById('intro-title').textContent = info.title;
+      document.getElementById('intro-desc').textContent = info.desc;
+
+      const cdEl = document.getElementById('intro-countdown');
+      cdEl.textContent = 'READY';
+      cdEl.style.color = '#ff69b8';
+      switchScreen('intro');
+
+      // まずアーケード風カットイン演出
+      playCutin(roundNum);
+
+      // カットイン後に 3, 2, 1, GO!
+      const steps = ['3', '2', '1', 'GO!'];
+      steps.forEach((txt, idx) => {
+        setTimeout(() => {
+          if (state.screen !== 'intro') return;
+          cdEl.textContent = txt;
+          cdEl.style.color = txt === 'GO!' ? '#ccff00' : (idx % 2 === 0 ? '#ff1e8e' : '#00f5ff');
+          cdEl.classList.remove('animate-count');
+          void cdEl.offsetWidth;
+          cdEl.classList.add('animate-count');
+          if (txt === 'GO!') {
+            SoundFX.go();
+            FX.burst(window.innerWidth / 2, window.innerHeight / 2, 18, ['#ccff00', '#00f5ff', '#ff1e8e']);
+          } else {
+            SoundFX.countdown();
+          }
+        }, 1650 + idx * 630);
+      });
+    }
+
+    /* ========================================================================
+     * 10. 5つのドーパミン全開ミニゲーム
+     * ====================================================================== */
+    function bindGameInputs() {
+      // Round 1: 巨大ハート・リアクター連打
+      const r1Btn = document.getElementById('r1-tap-btn');
+      r1Btn.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        if (!state.isPlaying || state.currentRound !== 1) return;
+        r1State.count++;
+        document.getElementById('r1-my-count').textContent = r1State.count;
+
+        const heartSvg = document.getElementById('r1-heart-svg');
+        heartSvg.style.transform = 'scale(1.16)';
+        setTimeout(() => { heartSvg.style.transform = 'scale(1)'; }, 65);
+
+        const wasFever = r1State.fever;
+        const pct = Math.min(100, Math.round((r1State.count / 40) * 100));
+        r1State.fever = pct >= 100;
+        SoundFX.tapCombo(r1State.count, r1State.fever);
+        updateR1FeverUI(pct, !wasFever && r1State.fever);
+
+        // Canvasパーティクル爆発＋テキスト
+        FX.burst(e.clientX, e.clientY, r1State.fever ? 14 : 7, r1State.fever ? ['#ccff00', '#00f5ff', '#ff1e8e', '#ffffff'] : ['#ff1e8e', '#ff69b8', '#ffffff']);
+        if (r1State.fever && r1State.count % 4 === 0) {
+          FX.popup(e.clientX, e.clientY - 26, `FEVER♡ ${r1State.count}`, '#ccff00', 24);
+          triggerShake('game-r1');
+        } else if (r1State.count % 6 === 0) {
+          FX.popup(e.clientX, e.clientY - 22, `+${r1State.count}!!`, '#00f5ff', 20);
+        }
+
+        const me = state.players.find((p) => p.id === state.myId);
+        if (me) me.tapCount = r1State.count;
+        renderR1Bars();
+
+        const now = Date.now();
+        if (now - r1State.lastSent > 120) {
+          r1State.lastSent = now;
+          sendToHost({ type: 'R1_TAP_UPDATE', id: state.myId, count: r1State.count });
+        }
+      });
+
+      // Round 4: ストップボタン
+      document.getElementById('r4-stop-btn').addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        handleR4Stop(e);
+      });
+
+      // Round 5: 早押しエリア
+      document.getElementById('r5-arena').addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        handleR5Tap(e);
+      });
+    }
+
+    function beginRoundPlay(roundNum) {
+      state.isPlaying = true;
+      const info = ROUNDS[roundNum - 1];
+
+      switchScreen('game');
+      document.getElementById('game-round-pill').textContent = `R${roundNum}`;
+      document.getElementById('game-title-label').textContent = info.title;
+
+      for (let i = 1; i <= 5; i++) {
+        document.getElementById('game-r' + i).classList.toggle('hidden', i !== roundNum);
+      }
+
+      if (gameTimerInterval) clearInterval(gameTimerInterval);
+      const timerEl = document.getElementById('game-timer-text');
+      const endAt = performance.now() + info.duration;
+
+      gameTimerInterval = setInterval(() => {
+        const rem = Math.max(0, (endAt - performance.now()) / 1000);
+        timerEl.textContent = rem.toFixed(1) + 's';
+        if (rem <= 0) {
+          clearInterval(gameTimerInterval);
+          gameTimerInterval = null;
+          if (roundNum === 1) {
+            sendToHost({ type: 'ROUND_SUBMIT', round: 1, id: state.myId, metric: r1State.count, display: `${r1State.count}連打` });
+          } else if (roundNum === 2 && !r2State.submitted) {
+            r2State.submitted = true;
+            sendToHost({ type: 'ROUND_SUBMIT', round: 2, id: state.myId, metric: r2State.score, display: `${r2State.score}pt` });
+          } else if (roundNum === 3 && !r3State.submitted) {
+            r3State.submitted = true;
+            if (r3SpawnInterval) { clearInterval(r3SpawnInterval); r3SpawnInterval = null; }
+            sendToHost({ type: 'ROUND_SUBMIT', round: 3, id: state.myId, metric: r3State.points, display: `${r3State.points}pt` });
+          }
+        }
+      }, 100);
+
+      if (roundNum === 1) initRound1();
+      if (roundNum === 2) initRound2();
+      if (roundNum === 3) initRound3();
+      if (roundNum === 4) initRound4();
+      if (roundNum === 5) initRound5();
+    }
+
+    /* --- Round 1: メンヘラ♡連打オーバーロード --- */
+    function initRound1() {
+      r1State.count = 0;
+      r1State.lastSent = 0;
+      r1State.fever = false;
+      document.getElementById('r1-my-count').textContent = '0';
+      document.getElementById('r1-fever-tag').classList.add('hidden');
+      document.getElementById('r1-ring-outer').classList.remove('ring-fever');
+      document.getElementById('r1-ring-inner').classList.remove('ring-fever');
+      updateR1FeverUI(0, false);
+      renderR1Bars();
+    }
+
+    function updateR1FeverUI(pct, justEntered) {
+      const bar = document.getElementById('r1-fever-bar');
+      const lbl = document.getElementById('r1-fever-label');
+      bar.style.width = pct + '%';
+      if (pct >= 100) {
+        bar.className = 'h-full rounded-full transition-all duration-100 holo-rainbow';
+        lbl.textContent = '🔥 OVERLOAD FEVER!!';
+        document.getElementById('r1-fever-tag').classList.remove('hidden');
+        document.getElementById('r1-ring-outer').classList.add('ring-fever');
+        document.getElementById('r1-ring-inner').classList.add('ring-fever');
+        if (justEntered) {
+          SoundFX.rare();
+          triggerShake('app-main');
+          FX.popup(window.innerWidth / 2, window.innerHeight * 0.42, 'OVERLOAD FEVER!!', '#ccff00', 28);
+        }
+      } else {
+        bar.className = 'h-full rounded-full transition-all duration-100 bg-gradient-to-r from-[#ff1e8e] via-[#b429ff] to-[#00f5ff]';
+        lbl.textContent = `${pct}%`;
+      }
+    }
+
+    function renderR1Bars() {
+      const container = document.getElementById('r1-race-bars');
+      if (!container) return;
+      const sorted = [...state.players].sort((a, b) => (b.tapCount || 0) - (a.tapCount || 0));
+      const maxVal = Math.max(30, ...sorted.map((p) => p.tapCount || 0));
+
+      container.innerHTML = sorted.map((p) => {
+        const pct = Math.min(100, Math.round(((p.tapCount || 0) / maxVal) * 100));
+        const isMe = p.id === state.myId;
+        return `
+          <div class="flex items-center gap-2 text-xs">
+            <div class="w-20 sm:w-24 flex items-center gap-1 truncate font-black ${isMe ? 'text-[#ccff00]' : 'text-pink-100'}">
+              <span>${p.avatar}</span>
+              <span class="truncate">${escapeHtml(p.name)}</span>
+            </div>
+            <div class="flex-1 h-3 bg-black rounded-full overflow-hidden border border-[#ff1e8e]/45">
+              <div class="h-full rounded-full transition-all duration-150 ${isMe ? 'holo-rainbow' : 'bg-gradient-to-r from-[#ff1e8e] to-[#b429ff]'}" style="width:${pct}%"></div>
+            </div>
+            <div class="w-8 text-right font-cyber text-[11px] text-[#00f5ff]">${p.tapCount || 0}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    /* --- Round 2: 毒色♡カラー・トラップ (15sスコアアタック) --- */
+    function initRound2() {
+      r2State.score = 0;
+      r2State.combo = 0;
+      r2State.submitted = false;
+      updateR2Hud();
+      nextR2Question();
+    }
+
+    function updateR2Hud() {
+      const mult = (1 + Math.min(r2State.combo, 10) * 0.2).toFixed(1);
+      document.getElementById('r2-score-hud').textContent = `${r2State.score} pt`;
+      const badge = document.getElementById('r2-combo-badge');
+      badge.textContent = `COMBO ${r2State.combo} (x${mult})`;
+      if (r2State.combo >= 3) {
+        badge.className = 'px-3 py-1 rounded-lg holo-rainbow text-black font-black shadow-[0_0_16px_#ccff00]';
+      } else {
+        badge.className = 'px-3 py-1 rounded-lg bg-black border border-[#ccff00] text-[#ccff00] font-black';
+      }
+    }
+
+    function nextR2Question() {
+      const textDef = NEON_COLORS[Math.floor(Math.random() * 4)];
+      let colorDef = NEON_COLORS[Math.floor(Math.random() * 4)];
+      if (colorDef.id === textDef.id) {
+        colorDef = NEON_COLORS[(NEON_COLORS.indexOf(textDef) + 1 + Math.floor(Math.random() * 3)) % 4];
+      }
+      const mode = Math.random() < 0.5 ? 'color' : 'word';
+      r2State.currentQ = { mode, textDef, colorDef };
+
+      const instEl = document.getElementById('r2-instruction');
+      if (mode === 'color') {
+        instEl.className = 'py-2.5 px-4 rounded-xl bg-[#ff1e8e]/25 border-2 border-[#ff1e8e] font-pop text-sm sm:text-base text-white shadow-[0_0_14px_rgba(255,30,142,0.45)]';
+        instEl.innerHTML = '文字の<span class="text-[#ccff00] text-lg mx-1">【色】</span>を選んで！';
+      } else {
+        instEl.className = 'py-2.5 px-4 rounded-xl bg-[#00f5ff]/20 border-2 border-[#00f5ff] font-pop text-sm sm:text-base text-white shadow-[0_0_14px_rgba(0,245,255,0.45)]';
+        instEl.innerHTML = '書いてある<span class="text-[#00f5ff] text-lg mx-1">【言葉】</span>を選んで！';
+      }
+
+      const wordEl = document.getElementById('r2-word-text');
+      wordEl.textContent = textDef.label;
+      wordEl.style.color = colorDef.hex;
+      wordEl.style.textShadow = `0 0 18px ${colorDef.hex}`;
+      triggerGlitch('r2-monitor');
+
+      const choicesEl = document.getElementById('r2-choices');
+      choicesEl.innerHTML = '';
+      const shuffled = [...NEON_COLORS].sort(() => Math.random() - 0.5);
+      shuffled.forEach((c) => {
+        const btn = document.createElement('button');
+        btn.className = `tap-target py-4 rounded-2xl font-pop text-lg btn-jelly ${c.btnClass}`;
+        btn.textContent = c.label;
+        btn.addEventListener('pointerdown', (e) => {
+          e.preventDefault();
+          handleR2Answer(c.id, e);
+        });
+        choicesEl.appendChild(btn);
+      });
+    }
+
+    function handleR2Answer(selectedId, e) {
+      if (!state.isPlaying || state.currentRound !== 2 || r2State.submitted || !r2State.currentQ) return;
+      const q = r2State.currentQ;
+      const expected = q.mode === 'color' ? q.colorDef.id : q.textDef.id;
+
+      if (selectedId === expected) {
+        r2State.combo++;
+        const mult = 1 + Math.min(r2State.combo, 10) * 0.2;
+        const gained = Math.round(50 * mult);
+        r2State.score += gained;
+        SoundFX.correct(r2State.combo);
+        FX.burst(e.clientX, e.clientY, r2State.combo >= 3 ? 14 : 8, ['#ccff00', '#00f5ff', '#ff1e8e']);
+        FX.popup(e.clientX, e.clientY - 18, `+${gained}!!`, '#ccff00', 22);
+        updateR2Hud();
+        nextR2Question();
+      } else {
+        r2State.combo = 0;
+        r2State.score = Math.max(0, r2State.score - 30);
+        SoundFX.wrong();
+        triggerGlitch('game-r2');
+        triggerShake('game-r2');
+        FX.popup(e.clientX, e.clientY - 18, 'MISS -30', '#ff1e8e', 22);
+        updateR2Hud();
+      }
+    }
+
+    /* --- Round 3: キラキラ♡ドーパミン・ハント (12s) --- */
+    function initRound3() {
+      r3State.points = 0;
+      r3State.submitted = false;
+      document.getElementById('r3-score-text').textContent = '0';
+
+      const arena = document.getElementById('r3-arena');
+      arena.innerHTML = '';
+      for (let i = 0; i < 4; i++) spawnHuntTarget();
+
+      if (r3SpawnInterval) clearInterval(r3SpawnInterval);
+      r3SpawnInterval = setInterval(() => {
+        if (!state.isPlaying || state.currentRound !== 3 || r3State.submitted) {
+          clearInterval(r3SpawnInterval);
+          return;
+        }
+        if (arena.children.length < 7) spawnHuntTarget();
+      }, 390);
+    }
+
+    function pickHuntItem() {
+      const total = HUNT_ITEMS.reduce((s, it) => s + it.weight, 0);
+      let r = Math.random() * total;
+      for (const it of HUNT_ITEMS) {
+        r -= it.weight;
+        if (r <= 0) return it;
+      }
+      return HUNT_ITEMS[0];
+    }
+
+    function spawnHuntTarget() {
+      const arena = document.getElementById('r3-arena');
+      if (!arena) return;
+      const item = pickHuntItem();
+
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `hunt-target w-14 h-14 sm:w-16 sm:h-16 rounded-full border-2 flex items-center justify-center text-3xl font-black active:scale-75 transition-transform ${item.cls}`;
+      btn.style.left = (12 + Math.random() * 76) + '%';
+      btn.style.top = (14 + Math.random() * 72) + '%';
+      btn.textContent = item.emoji;
+
+      const lifeMs = item.pts >= 35 ? 1200 : 1700;
+      const timer = setTimeout(() => { if (btn.parentNode) btn.remove(); }, lifeMs);
+
+      btn.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        if (!state.isPlaying || state.currentRound !== 3 || r3State.submitted) return;
+        clearTimeout(timer);
+        btn.remove();
+
+        r3State.points = Math.max(0, r3State.points + item.pts);
+        document.getElementById('r3-score-text').textContent = r3State.points;
+
+        if (item.pts >= 35) {
+          SoundFX.rare();
+          triggerShake('game-r3');
+          FX.burst(e.clientX, e.clientY, 18, ['#ccff00', '#00f5ff', '#ff1e8e', '#ffffff']);
+          FX.popup(e.clientX, e.clientY - 16, 'RARE +35!!', '#ccff00', 26);
+        } else if (item.pts > 0) {
+          SoundFX.correct(2);
+          FX.burst(e.clientX, e.clientY, 10, [item.color, '#ffffff']);
+          FX.popup(e.clientX, e.clientY - 14, `+${item.pts}♡`, item.color, 20);
+        } else {
+          SoundFX.wrong();
+          triggerGlitch('game-r3');
+          FX.burst(e.clientX, e.clientY, 12, ['#b429ff', '#ff1e8e']);
+          FX.popup(e.clientX, e.clientY - 14, '-20💀', '#ff1e8e', 24);
+        }
+      });
+
+      arena.appendChild(btn);
+    }
+
+    /* --- Round 4: ぴったんこ♡5.00秒（リアルタイムネオン心電図ECG Canvas） --- */
+    function initRound4() {
+      r4State.startTime = performance.now();
+      r4State.stopped = false;
+      r4State.ecgActive = false;
+      r4State.ecgX = 0;
+      r4State.ecgPoints = [];
+
+      document.getElementById('r4-stop-btn').classList.remove('hidden');
+      document.getElementById('r4-result-box').classList.add('hidden');
+      const clockEl = document.getElementById('r4-clock');
+      clockEl.className = 'relative z-10 font-cyber font-black text-5xl sm:text-6xl text-[#00f5ff] tracking-wider drop-shadow-[0_0_16px_#00f5ff]';
+      document.getElementById('r4-sub-hint').textContent = 'COUNTING...';
+
+      const ecgCanvas = document.getElementById('r4-ecg-canvas');
+      ecgCanvas.classList.add('hidden');
+      const ecgCtx = ecgCanvas.getContext('2d');
+
+      const resizeEcg = () => {
+        const rect = ecgCanvas.parentElement.getBoundingClientRect();
+        ecgCanvas.width = Math.max(300, rect.width);
+        ecgCanvas.height = Math.max(120, rect.height);
+      };
+      resizeEcg();
+
+      const tick = () => {
+        if (r4State.stopped || !state.isPlaying || state.currentRound !== 4) return;
+        const elapsed = (performance.now() - r4State.startTime) / 1000;
+
+        if (elapsed < 1.8) {
+          clockEl.textContent = elapsed.toFixed(2);
+        } else {
+          if (!r4State.ecgActive) {
+            r4State.ecgActive = true;
+            ecgCanvas.classList.remove('hidden');
+            triggerGlitch('game-r4');
+            clockEl.textContent = '?.??';
+            clockEl.className = 'relative z-10 font-cyber font-black text-4xl sm:text-5xl text-[#ff1e8e]/75 tracking-widest';
+            document.getElementById('r4-sub-hint').textContent = '💓 ECG SIGNAL ACTIVE — STOP AT 5.00s!';
+          }
+          // リアルタイム心電図波形描画（1秒周期のPQRST波形）
+          const cw = ecgCanvas.width;
+          const ch = ecgCanvas.height;
+          const phase = elapsed % 1.0;
+          let amp = 0;
+          if (phase > 0.12 && phase < 0.20) amp = -0.14 * Math.sin(((phase - 0.12) / 0.08) * Math.PI);
+          else if (phase >= 0.26 && phase < 0.30) amp = 0.2;
+          else if (phase >= 0.30 && phase < 0.35) amp = -0.82;
+          else if (phase >= 0.35 && phase < 0.40) amp = 0.38;
+          else if (phase >= 0.50 && phase < 0.64) amp = -0.22 * Math.sin(((phase - 0.50) / 0.14) * Math.PI);
+
+          const y = ch * 0.52 + amp * (ch * 0.42);
+          r4State.ecgPoints.push(y);
+          if (r4State.ecgPoints.length > cw / 3) r4State.ecgPoints.shift();
+
+          ecgCtx.clearRect(0, 0, cw, ch);
+          // 薄いグリッド
+          ecgCtx.strokeStyle = 'rgba(255, 30, 142, 0.14)';
+          ecgCtx.lineWidth = 1;
+          for (let gx = 0; gx < cw; gx += 24) { ecgCtx.beginPath(); ecgCtx.moveTo(gx, 0); ecgCtx.lineTo(gx, ch); ecgCtx.stroke(); }
+          for (let gy = 0; gy < ch; gy += 24) { ecgCtx.beginPath(); ecgCtx.moveTo(0, gy); ecgCtx.lineTo(cw, gy); ecgCtx.stroke(); }
+
+          // ピンクのネオン心電図ライン
+          ecgCtx.beginPath();
+          r4State.ecgPoints.forEach((py, idx) => {
+            const px = idx * 3;
+            if (idx === 0) ecgCtx.moveTo(px, py);
+            else ecgCtx.lineTo(px, py);
+          });
+          ecgCtx.strokeStyle = '#ff1e8e';
+          ecgCtx.lineWidth = 3;
+          ecgCtx.shadowColor = '#ff1e8e';
+          ecgCtx.shadowBlur = 14;
+          ecgCtx.stroke();
+
+          // 先端の輝くドット
+          if (r4State.ecgPoints.length > 0) {
+            const lx = (r4State.ecgPoints.length - 1) * 3;
+            const ly = r4State.ecgPoints[r4State.ecgPoints.length - 1];
+            ecgCtx.beginPath();
+            ecgCtx.arc(lx, ly, 4.5, 0, Math.PI * 2);
+            ecgCtx.fillStyle = '#ffffff';
+            ecgCtx.shadowColor = '#00f5ff';
+            ecgCtx.shadowBlur = 14;
+            ecgCtx.fill();
+          }
+        }
+        r4State.rafId = requestAnimationFrame(tick);
+      };
+      r4State.rafId = requestAnimationFrame(tick);
+    }
+
+    function handleR4Stop(e) {
+      if (!state.isPlaying || state.currentRound !== 4 || r4State.stopped) return;
+      r4State.stopped = true;
+      if (r4State.rafId) cancelAnimationFrame(r4State.rafId);
+      SoundFX.stop();
+
+      const elapsed = (performance.now() - r4State.startTime) / 1000;
+      const diff = Math.abs(elapsed - 5.0);
+
+      const clockEl = document.getElementById('r4-clock');
+      clockEl.textContent = elapsed.toFixed(2);
+      clockEl.className = 'relative z-10 font-cyber font-black text-5xl sm:text-6xl text-[#ccff00] tracking-wider drop-shadow-[0_0_18px_#ccff00]';
+      document.getElementById('r4-stop-btn').classList.add('hidden');
+      document.getElementById('r4-result-box').classList.remove('hidden');
+      document.getElementById('r4-my-record').textContent = elapsed.toFixed(2) + '秒';
+      document.getElementById('r4-my-diff').textContent = `誤差 ±${diff.toFixed(2)}秒`;
+
+      if (e) {
+        FX.burst(e.clientX, e.clientY, 16, ['#ccff00', '#ff1e8e', '#00f5ff']);
+        FX.popup(e.clientX, e.clientY - 20, `${elapsed.toFixed(2)}s!!`, '#ccff00', 26);
+      }
+
+      sendToHost({
+        type: 'ROUND_SUBMIT',
+        round: 4,
+        id: state.myId,
+        metric: diff,
+        display: `${elapsed.toFixed(2)}秒 (差${diff.toFixed(2)})`
+      });
+    }
+
+    /* --- Round 5: 電撃♡病みかわ早押し --- */
+    function initRound5() {
+      r5State.phase = 'waiting';
+      r5State.finished = false;
+      const arena = document.getElementById('r5-arena');
+      arena.className = 'tap-target relative rounded-3xl overflow-hidden min-h-[340px] flex flex-col items-center justify-center text-center border-4 border-[#ff1e8e] shadow-[0_0_32px_rgba(255,30,142,0.5)] cursor-pointer bg-[#10041c]';
+      document.getElementById('r5-laser-wrap').classList.remove('hidden');
+      document.getElementById('r5-lightning-svg').classList.add('hidden');
+      document.getElementById('r5-icon').textContent = '🖤';
+      document.getElementById('r5-main-text').textContent = 'まって…♡';
+      document.getElementById('r5-main-text').className = 'font-pop text-3xl sm:text-5xl text-[#ff69b8] drop-shadow-[0_0_12px_#ff1e8e]';
+      document.getElementById('r5-sub-text').textContent = '稲妻フラッシュとともに「NOW!! 押せ♡」が出たら最速タップ！';
+
+      const delayMs = (state.roundConfig && state.roundConfig.delayMs) || 3000;
+      r5State.flashTimer = setTimeout(() => {
+        if (!state.isPlaying || state.currentRound !== 5 || r5State.finished) return;
+        r5State.phase = 'go';
+        r5State.flashTime = performance.now();
+        SoundFX.flash();
+        triggerShake('game-r5');
+
+        arena.className = 'tap-target relative rounded-3xl overflow-hidden min-h-[340px] flex flex-col items-center justify-center text-center border-4 border-white shadow-[0_0_60px_#00f5ff,0_0_90px_#ff1e8e] cursor-pointer holo-rainbow';
+        document.getElementById('r5-laser-wrap').classList.add('hidden');
+        document.getElementById('r5-lightning-svg').classList.remove('hidden');
+        document.getElementById('r5-icon').textContent = '⚡💖';
+        document.getElementById('r5-main-text').textContent = 'NOW!! 押せ♡';
+        document.getElementById('r5-main-text').className = 'font-pop text-4xl sm:text-5xl text-white drop-shadow-[0_4px_10px_#000]';
+        document.getElementById('r5-sub-text').textContent = 'TAP RIGHT NOW!! ⚡⚡⚡';
+      }, delayMs);
+    }
+
+    function handleR5Tap(e) {
+      if (!state.isPlaying || state.currentRound !== 5 || r5State.finished) return;
+      r5State.finished = true;
+      if (r5State.flashTimer) clearTimeout(r5State.flashTimer);
+
+      const arena = document.getElementById('r5-arena');
+      document.getElementById('r5-laser-wrap').classList.add('hidden');
+
+      if (r5State.phase === 'waiting') {
+        SoundFX.wrong();
+        triggerGlitch('game-r5');
+        arena.className = 'relative rounded-3xl overflow-hidden min-h-[340px] flex flex-col items-center justify-center text-center border-4 border-rose-500 bg-[#1c0410]';
+        document.getElementById('r5-icon').textContent = '🥺💀';
+        document.getElementById('r5-main-text').textContent = 'フライング♡';
+        document.getElementById('r5-main-text').className = 'font-pop text-4xl text-rose-400';
+        document.getElementById('r5-sub-text').textContent = 'お手つき0点…みんなを待ってるよ';
+        if (e) FX.popup(e.clientX, e.clientY - 16, 'FOUL!!', '#ff1e8e', 26);
+
+        sendToHost({ type: 'ROUND_SUBMIT', round: 5, id: state.myId, metric: 99999, display: 'フライング♡' });
+      } else {
+        const reactMs = Math.round(performance.now() - r5State.flashTime);
+        SoundFX.rare();
+        if (e) {
+          FX.burst(e.clientX, e.clientY, 22, ['#ccff00', '#00f5ff', '#ff1e8e', '#ffffff']);
+          FX.popup(e.clientX, e.clientY - 20, `${reactMs}ms!!`, '#ccff00', 28);
+        }
+        arena.className = 'relative rounded-3xl overflow-hidden min-h-[340px] flex flex-col items-center justify-center text-center border-4 border-[#ccff00] shadow-[0_0_40px_rgba(204,255,0,0.65)] bg-[#140724]';
+        document.getElementById('r5-icon').textContent = '👑⚡';
+        document.getElementById('r5-main-text').textContent = `${reactMs} ms`;
+        document.getElementById('r5-main-text').className = 'font-cyber font-black text-5xl sm:text-6xl text-[#ccff00] drop-shadow-[0_0_16px_#ccff00]';
+        document.getElementById('r5-sub-text').textContent = '神速反応ッ♡ 結果発表を待ってるよ！';
+
+        sendToHost({ type: 'ROUND_SUBMIT', round: 5, id: state.myId, metric: reactMs, display: `${reactMs}ms` });
+      }
+    }
+
+    /* ========================================================================
+     * 11. BOT AI シミュレーション（ホスト側）
+     * ====================================================================== */
+    function scheduleBotsForRound(roundNum, config) {
+      const bots = state.players.filter((p) => p.isBot);
+      if (bots.length === 0) return;
+
+      bots.forEach((bot) => {
+        if (roundNum === 1) {
+          const targetTaps = 38 + Math.floor(Math.random() * 44);
+          const steps = 18;
+          for (let s = 1; s <= steps; s++) {
+            botTimers.push(setTimeout(() => {
+              if (!state.isPlaying || state.currentRound !== 1) return;
+              bot.tapCount = Math.round((targetTaps * s) / steps + (Math.random() * 2 - 1));
+              if (s === steps) {
+                bot.tapCount = targetTaps;
+                bot.roundDone = true;
+                bot.roundMetric = targetTaps;
+                bot.roundDisplay = `${targetTaps}連打`;
+              }
+              broadcast({ type: 'R1_TAPS_SYNC', taps: state.players.map((x) => ({ id: x.id, count: x.tapCount })) });
+              renderR1Bars();
+            }, s * 520));
+          }
+        } else if (roundNum === 2) {
+          const pts = 380 + Math.floor(Math.random() * 680);
+          botTimers.push(setTimeout(() => {
+            submitBotResult(bot, 2, pts, `${pts}pt`);
+          }, 14800));
+        } else if (roundNum === 3) {
+          const pts = 110 + Math.floor(Math.random() * 210);
+          botTimers.push(setTimeout(() => {
+            submitBotResult(bot, 3, pts, `${pts}pt`);
+          }, 11800));
+        } else if (roundNum === 4) {
+          const stopSec = +(5.0 + (Math.random() * 1.4 - 0.7)).toFixed(2);
+          const diff = Math.abs(stopSec - 5.0);
+          botTimers.push(setTimeout(() => {
+            submitBotResult(bot, 4, diff, `${stopSec.toFixed(2)}秒 (差${diff.toFixed(2)})`);
+          }, stopSec * 1000));
+        } else if (roundNum === 5) {
+          const delayMs = config.delayMs || 3000;
+          if (Math.random() < 0.14) {
+            const early = Math.max(600, delayMs - 300 - Math.random() * 900);
+            botTimers.push(setTimeout(() => submitBotResult(bot, 5, 99999, 'フライング♡'), early));
+          } else {
+            const reactMs = Math.round(180 + Math.random() * 340);
+            botTimers.push(setTimeout(() => submitBotResult(bot, 5, reactMs, `${reactMs}ms`), delayMs + reactMs));
+          }
+        }
+      });
+    }
+
+    function submitBotResult(bot, roundNum, metric, display) {
+      if (!state.isPlaying || state.currentRound !== roundNum || bot.roundDone) return;
+      bot.roundDone = true;
+      bot.roundMetric = metric;
+      bot.roundDisplay = display;
+      broadcastState();
+      renderMiniPlayerBar();
+      checkHostAllFinished();
+    }
+
+    /* ========================================================================
+     * 12. 集計・ラウンドリザルト・最終アクリルスタンド表彰台
+     * ====================================================================== */
+    function checkHostAllFinished() {
+      if (!state.isHost || !state.isPlaying) return;
+      if (state.currentRound === 1 || state.currentRound === 2 || state.currentRound === 3) return;
+      if (state.players.every((p) => p.roundDone)) {
+        if (hostRoundTimeout) { clearTimeout(hostRoundTimeout); hostRoundTimeout = null; }
+        setTimeout(() => hostFinishRound(), 550);
+      }
+    }
+
+    function hostFinishRound() {
+      if (!state.isHost || !state.isPlaying) return;
+      state.isPlaying = false;
+      clearAllTimers();
+
+      const r = state.currentRound;
+      const isHigherBetter = (r === 1 || r === 2 || r === 3);
+
+      state.players.forEach((p) => {
+        if (!p.roundDone) {
+          p.roundDone = true;
+          if (r === 1) { p.roundMetric = p.tapCount || 0; p.roundDisplay = `${p.tapCount || 0}連打`; }
+          else if (r === 2 || r === 3) { p.roundMetric = 0; p.roundDisplay = '0pt'; }
+          else { p.roundMetric = 99999; p.roundDisplay = 'タイムアップ'; }
+        }
+      });
+
+      const sorted = [...state.players].sort((a, b) => {
+        if (isHigherBetter) return (b.roundMetric || 0) - (a.roundMetric || 0);
+        return (a.roundMetric ?? 99999) - (b.roundMetric ?? 99999);
+      });
+
+      const rankings = sorted.map((p, idx) => {
+        const isZero = (isHigherBetter && p.roundMetric <= 0) || (!isHigherBetter && p.roundMetric >= 99999);
+        const gained = isZero ? 0 : (RANK_POINTS[idx] || 200);
+        p.score += gained;
+        return {
+          id: p.id, name: p.name, avatar: p.avatar,
+          rank: idx + 1, display: p.roundDisplay, gained, total: p.score
+        };
+      });
+
+      broadcast({ type: 'ROUND_RESULT', round: r, rankings, players: state.players });
+      showRoundResultScreen(r, rankings);
+    }
+
+    function showRoundResultScreen(roundNum, rankings) {
+      state.isPlaying = false;
+      clearAllTimers();
+      renderMiniPlayerBar();
+      switchScreen('roundResult');
+      SoundFX.fanfare();
+      triggerShake('screen-round-result');
+
+      const info = ROUNDS[roundNum - 1];
+      document.getElementById('rr-badge').textContent = `ROUND ${roundNum} / 5 RESULT`;
+      document.getElementById('rr-title').textContent = `${info.icon} ${info.title}`;
+
+      document.getElementById('rr-list').innerHTML = rankings.map((r) => {
+        const medal = r.rank === 1 ? '👑' : r.rank === 2 ? '🥈' : r.rank === 3 ? '🥉' : `#${r.rank}`;
+        const isMe = r.id === state.myId;
+        return `
+          <div class="flex items-center justify-between px-3.5 py-2.5 rounded-xl border-2 ${
+            r.rank === 1 ? 'holo-border-1st' :
+            isMe ? 'bg-[#2c0c42] border-[#00f5ff] shadow-[0_0_14px_rgba(0,245,255,0.4)]' :
+            'bg-[#13061f] border-[#ff1e8e]/45'
+          }">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <div class="w-8 text-center font-cyber font-black text-base text-[#ccff00]">${medal}</div>
+              <div class="text-2xl">${r.avatar}</div>
+              <div class="min-w-0">
+                <div class="font-black text-sm text-white truncate">${escapeHtml(r.name)}</div>
+                <div class="text-xs font-pixel text-[#00f5ff]">${escapeHtml(r.display)}</div>
+              </div>
+            </div>
+            <div class="text-right shrink-0">
+              <div class="font-cyber text-sm font-black text-[#ccff00]">+${r.gained}pt</div>
+              <div class="font-pixel text-[11px] text-[#ff69b8]">計 ${r.total}pt</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      const nextBtn = document.getElementById('btn-next-round');
+      nextBtn.classList.toggle('hidden', !state.isHost);
+      nextBtn.textContent = roundNum < 5 ? '次のラウンドへ ⚡' : '最終けっかへ 👑';
+
+      let secLeft = 4;
+      const autoText = document.getElementById('rr-auto-text');
+      autoText.textContent = roundNum < 5 ? `NEXT ROUND IN ${secLeft}s...` : `FINAL PODIUM IN ${secLeft}s...`;
+
+      nextRoundInterval = setInterval(() => {
+        secLeft--;
+        if (secLeft > 0) {
+          autoText.textContent = roundNum < 5 ? `NEXT ROUND IN ${secLeft}s...` : `FINAL PODIUM IN ${secLeft}s...`;
+        } else {
+          clearInterval(nextRoundInterval);
+          nextRoundInterval = null;
+          if (state.isHost) hostForceNext();
+        }
+      }, 1000);
+    }
+
+    function hostForceNext(evt) {
+      if (!state.isHost) return;
+      if (evt) FX.burst(evt.clientX, evt.clientY, 12, ['#ff1e8e', '#00f5ff']);
+      clearAllTimers();
+      if (state.currentRound < 5) {
+        hostLaunchRound(state.currentRound + 1);
+      } else {
+        broadcast({ type: 'FINAL_RESULT', players: state.players });
+        showFinalScreen();
+      }
+    }
+
+    function showFinalScreen() {
+      clearAllTimers();
+      switchScreen('final');
+      renderMiniPlayerBar();
+      SoundFX.fanfare();
+      FX.startConfetti(7500);
+
+      const sorted = [...state.players].sort((a, b) => b.score - a.score);
+
+      const podiumOrder = [
+        { idx: 1, label: '2ND', medal: '🥈', height: 'h-24', grad: 'from-[#b429ff] to-[#4e008a]', border: 'border-[#00f5ff]', glow: 'shadow-[0_0_22px_rgba(180,41,255,0.65)]' },
+        { idx: 0, label: '1ST', medal: '👑', height: 'h-36', grad: 'from-[#ff1e8e] via-[#ff47a3] to-[#b429ff]', border: 'border-[#ccff00]', glow: 'shadow-[0_0_32px_rgba(255,30,142,0.9)]' },
+        { idx: 2, label: '3RD', medal: '🥉', height: 'h-20', grad: 'from-[#00f5ff] to-[#006a8a]', border: 'border-white', glow: 'shadow-[0_0_20px_rgba(0,245,255,0.6)]' }
+      ];
+
+      document.getElementById('final-podium').innerHTML = podiumOrder.map((slot) => {
+        const p = sorted[slot.idx];
+        if (!p) {
+          return `<div class="flex flex-col items-center opacity-20"><div class="w-full ${slot.height} rounded-t-2xl bg-[#190826] border-t-2 border-pink-500/40"></div></div>`;
+        }
+        return `
+          <div class="flex flex-col items-center">
+            <!-- アクリルスタンド風プレート -->
+            <div class="relative mb-2 px-2.5 py-2 rounded-2xl bg-white/10 backdrop-blur-md border-2 border-white/85 shadow-[0_0_18px_rgba(255,255,255,0.35)] flex flex-col items-center w-full max-w-[116px]">
+              <div class="text-xl sm:text-2xl leading-none">${slot.medal}</div>
+              <div class="text-3xl sm:text-4xl my-1 drop-shadow-[0_0_10px_#ff1e8e]">${p.avatar}</div>
+              <div class="font-black text-[11px] sm:text-xs text-white truncate w-full text-center">${escapeHtml(p.name)}</div>
+              <div class="font-cyber text-[10px] sm:text-xs font-black text-[#ccff00]">${p.score}pt</div>
+            </div>
+            <!-- ネオン台座 -->
+            <div class="w-full ${slot.height} rounded-t-2xl bg-gradient-to-b ${slot.grad} border-t-4 ${slot.border} ${slot.glow} flex flex-col items-center justify-center text-white font-cyber font-black">
+              <span class="text-lg sm:text-2xl drop-shadow">${slot.label}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('final-full-list').innerHTML = sorted.map((p, i) => {
+        const isMe = p.id === state.myId;
+        return `
+          <div class="flex items-center justify-between px-3.5 py-2 rounded-xl ${
+            i === 0 ? 'holo-border-1st' :
+            isMe ? 'bg-[#2c0c42] border-2 border-[#00f5ff]' :
+            'bg-[#13061f] border border-[#ff1e8e]/40'
+          }">
+            <div class="flex items-center gap-2.5">
+              <span class="w-8 font-cyber font-black text-sm text-[#ccff00]">#${i + 1}</span>
+              <span class="text-xl">${p.avatar}</span>
+              <span class="font-black text-sm text-white">${escapeHtml(p.name)}</span>
+            </div>
+            <span class="font-cyber font-black text-sm text-[#ff69b8]">${p.score} pt</span>
+          </div>
+        `;
+      }).join('');
+
+      document.getElementById('btn-rematch').classList.toggle('hidden', !state.isHost);
+      document.getElementById('final-guest-wait').classList.toggle('hidden', state.isHost);
+    }
+
+    function hostRematch(evt) {
+      if (!state.isHost) return;
+      if (evt) FX.burst(evt.clientX, evt.clientY, 16, ['#ff1e8e', '#00f5ff', '#ccff00']);
+      SoundFX.click();
+      clearAllTimers();
+      state.currentRound = 0;
+      state.isPlaying = false;
+      state.players.forEach((p) => {
+        p.score = 0; p.roundDone = false; p.roundMetric = null; p.roundDisplay = ''; p.tapCount = 0;
+      });
+      state.prevScores = {};
+      broadcast({ type: 'RETURN_LOBBY', players: state.players });
+      switchScreen('lobby');
+      renderAllPlayerViews();
+      showToast('ロビーにもどったよ！もう一回あそぼ♡');
+    }
+  </script>
+</body>
+</html>
