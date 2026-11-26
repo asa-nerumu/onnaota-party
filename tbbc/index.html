@@ -1,0 +1,1627 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>TACO BURRITO BEER CLINK!</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Fredoka & M PLUS Rounded 1c -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@600;700&family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap" rel="stylesheet">
+    <style>
+        /* メキシカンバル＆フィエスタ風の明るくポップなカラーパレット */
+        :root {
+            --bg-foam: #FFFDF5;
+            --beer-gold: #F59E0B;
+            --beer-amber: #D97706;
+            --chili-red: #E63946;
+            --lime-green: #40916C;
+            --lime-bright: #52B788;
+            --wood-brown: #3D2314;
+            --board-bg: #FDE68A;
+            --cell-bg: #FFFDF7;
+        }
+
+        body {
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            background: linear-gradient(180deg, #FFFDF5 0%, #FEF3C7 55%, #FDE68A 100%);
+            color: var(--wood-brown);
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        .font-title {
+            font-family: 'Fredoka', 'M PLUS Rounded 1c', sans-serif;
+        }
+
+        /* 背景のビールの泡アニメーション */
+        .bg-bubbles {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 0;
+        }
+
+        .bg-bubble {
+            position: absolute;
+            bottom: -40px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.25));
+            border: 1px solid rgba(255, 255, 255, 0.65);
+            animation: riseBubble linear infinite;
+        }
+
+        @keyframes riseBubble {
+            0% { transform: translateY(0) translateX(0) scale(0.8); opacity: 0; }
+            15% { opacity: 0.75; }
+            85% { opacity: 0.5; }
+            100% { transform: translateY(-110vh) translateX(18px) scale(1.1); opacity: 0; }
+        }
+
+        /* フィエスタ風の装飾ライン */
+        .fiesta-stripe {
+            height: 6px;
+            width: 100%;
+            border-radius: 999px;
+            background: repeating-linear-gradient(
+                90deg,
+                #E63946 0px, #E63946 18px,
+                #F59E0B 18px, #F59E0B 36px,
+                #40916C 36px, #40916C 54px,
+                #FFFDF5 54px, #FFFDF5 64px
+            );
+            border: 1.5px solid var(--wood-brown);
+        }
+
+        /* ボードとタイルのスタイル（7×7） */
+        #game-board-container {
+            position: relative;
+            width: 100%;
+            max-width: 440px;
+            aspect-ratio: 1 / 1;
+            background: linear-gradient(145deg, #FDE68A, #FCD34D);
+            border: 4px solid var(--wood-brown);
+            border-radius: 22px;
+            box-shadow: 0 8px 0 rgba(61, 35, 20, 0.22), inset 0 3px 8px rgba(255, 255, 255, 0.5);
+            padding: 8px;
+            touch-action: none; /* スワイプ時の画面スクロール防止 */
+        }
+
+        #game-board {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            border-radius: 14px;
+            overflow: hidden;
+        }
+
+        /* 背景の7×7グリッドマス */
+        .grid-bg {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            grid-template-rows: repeat(7, 1fr);
+            width: 100%;
+            height: 100%;
+            gap: 5px;
+        }
+
+        .grid-cell {
+            background: rgba(255, 253, 247, 0.85);
+            border-radius: 12px;
+            box-shadow: inset 0 1.5px 3px rgba(61, 35, 20, 0.08);
+        }
+
+        /* 動くタイル（7×7、gap 5px → 合計30px） */
+        .tile {
+            position: absolute;
+            width: calc((100% - 30px) / 7);
+            height: calc((100% - 30px) / 7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(1.6rem, 7.2vw, 2.55rem);
+            cursor: pointer;
+            border-radius: 12px;
+            transition: left 0.19s cubic-bezier(0.34, 1.56, 0.64, 1),
+                        top 0.23s cubic-bezier(0.34, 1.38, 0.64, 1),
+                        transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1),
+                        opacity 0.18s ease;
+            z-index: 10;
+            will-change: left, top, transform;
+        }
+
+        .tile-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            filter: drop-shadow(0 2px 2px rgba(61, 35, 20, 0.18));
+        }
+
+        .tile:hover .tile-inner {
+            transform: scale(1.08);
+        }
+
+        /* 選択中状態 */
+        .tile.selected {
+            z-index: 25;
+        }
+        .tile.selected .tile-inner {
+            background: rgba(245, 158, 11, 0.42);
+            box-shadow: 0 0 0 3px var(--chili-red), 0 5px 10px rgba(230, 57, 70, 0.35);
+            transform: scale(1.13);
+            animation: wiggle 0.45s ease-in-out infinite alternate;
+        }
+
+        /* スペシャルタイル（4つ以上の塊消しで出現：🍻乾杯ボム） */
+        .tile.special .tile-inner {
+            background: radial-gradient(circle, #FFFBEB 15%, #F59E0B 95%);
+            box-shadow: 0 0 12px #F59E0B, inset 0 0 8px #FFFFFF;
+            animation: specialPulse 1.05s ease-in-out infinite;
+        }
+
+        .special-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            font-size: 0.9rem;
+            line-height: 1;
+            filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.45));
+            animation: cheersBounce 0.55s ease-in-out infinite alternate;
+        }
+
+        /* 無効スワップ時のブルッと震えるアニメーション */
+        .tile.invalid-shake .tile-inner {
+            animation: invalidShake 0.24s ease-in-out;
+        }
+
+        @keyframes invalidShake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-6px) rotate(-6deg); }
+            50% { transform: translateX(6px) rotate(6deg); }
+            75% { transform: translateX(-4px) rotate(-4deg); }
+        }
+
+        /* くっついて中心へギュッと引き寄せられるアニメーション */
+        .tile.clinking {
+            z-index: 30;
+            transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform: translate(var(--pull-x, 0px), var(--pull-y, 0px)) scale(1.12);
+        }
+
+        /* 弾けて消えるアニメーション */
+        .tile.popping {
+            z-index: 35;
+            transition: transform 0.17s ease-out, opacity 0.17s ease-out;
+            transform: translate(var(--pull-x, 0px), var(--pull-y, 0px)) scale(1.38);
+            opacity: 0;
+        }
+
+        /* ヒントアニメーション */
+        .tile.hint .tile-inner {
+            box-shadow: 0 0 0 3px var(--lime-green), 0 0 12px rgba(64, 145, 108, 0.65);
+            animation: hintBounce 0.65s ease-in-out infinite;
+        }
+
+        /* キーフレーム */
+        @keyframes wiggle {
+            0% { transform: scale(1.1) rotate(-5deg); }
+            100% { transform: scale(1.15) rotate(5deg); }
+        }
+
+        @keyframes specialPulse {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 10px #F59E0B, 0 0 0 2px #FFF; }
+            50% { transform: scale(1.07); box-shadow: 0 0 18px #E63946, 0 0 0 3px #FEF3C7; }
+        }
+
+        @keyframes cheersBounce {
+            0% { transform: translateY(0) rotate(-8deg) scale(1); }
+            100% { transform: translateY(-3px) rotate(8deg) scale(1.2); }
+        }
+
+        @keyframes hintBounce {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); filter: brightness(1.12); }
+        }
+
+        /* ポップアップスコア＆コンボ表示 */
+        .float-text {
+            position: absolute;
+            pointer-events: none;
+            z-index: 50;
+            font-weight: 800;
+            text-shadow: 0 2px 0 #FFF, 0 -2px 0 #FFF, 2px 0 0 #FFF, -2px 0 0 #FFF, 0 4px 6px rgba(0, 0, 0, 0.22);
+            animation: floatUp 0.92s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+            white-space: nowrap;
+        }
+
+        @keyframes floatUp {
+            0% { transform: translate(-50%, 0) scale(0.6); opacity: 0; }
+            22% { transform: translate(-50%, -14px) scale(1.18); opacity: 1; }
+            100% { transform: translate(-50%, -56px) scale(0.95); opacity: 0; }
+        }
+
+        /* パーティクル */
+        .particle {
+            position: absolute;
+            pointer-events: none;
+            z-index: 45;
+            font-size: 1.05rem;
+            animation: particleBurst 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes particleBurst {
+            0% { transform: translate(-50%, -50%) scale(1.1) rotate(0deg); opacity: 1; }
+            100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0.2) rotate(var(--rot)); opacity: 0; }
+        }
+
+        /* バル風ボタン */
+        .bar-btn {
+            border: 2.5px solid var(--wood-brown);
+            box-shadow: 0 3.5px 0 var(--wood-brown);
+            transition: transform 0.1s ease, box-shadow 0.1s ease;
+        }
+        .bar-btn:active {
+            transform: translateY(2.5px);
+            box-shadow: 0 1px 0 var(--wood-brown);
+        }
+
+        /* 通知バナー */
+        #toast-banner {
+            transition: opacity 0.28s ease, transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        /* スタート画面（タイトルオーバーレイ） */
+        #start-overlay {
+            transition: opacity 0.35s ease, visibility 0.35s ease;
+        }
+        #start-overlay.hidden-overlay {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        .hero-bounce {
+            display: inline-block;
+            animation: heroBounce 1.4s ease-in-out infinite;
+        }
+        .hero-bounce:nth-child(2) {
+            animation-delay: 0.18s;
+        }
+        .hero-bounce:nth-child(3) {
+            animation-delay: 0.36s;
+        }
+
+        @keyframes heroBounce {
+            0%, 100% { transform: translateY(0) scale(1); }
+            45% { transform: translateY(-9px) scale(1.1); }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-2.5 sm:p-4">
+
+    <!-- 背景のビール泡レイヤー -->
+    <div id="bg-bubbles" class="bg-bubbles"></div>
+
+    <!-- BGMオーディオ要素（同じフォルダの bgm.mp3 を自動ループ再生） -->
+    <audio id="bgm-audio" src="bgm.mp3" loop preload="auto"></audio>
+
+    <!-- スタート画面（タイトルオーバーレイ） -->
+    <div id="start-overlay" class="fixed inset-0 z-50 bg-[#3D2314]/65 backdrop-blur-[3px] flex items-center justify-center p-4">
+        <div class="w-full max-w-[380px] bg-[#FFFDF5] border-4 border-[#3D2314] rounded-3xl p-5 sm:p-6 shadow-[0_10px_0_rgba(61,35,20,0.3)] text-center relative overflow-hidden">
+            <!-- 上部フィエスタライン -->
+            <div class="fiesta-stripe mb-4"></div>
+
+            <!-- 弾むアイコン -->
+            <div class="text-5xl sm:text-6xl mb-2 tracking-wide select-none">
+                <span class="hero-bounce">🌮</span>
+                <span class="hero-bounce">🌯</span>
+                <span class="hero-bounce">🍺</span>
+            </div>
+
+            <!-- ロゴタイトル -->
+            <h2 class="font-title text-2xl sm:text-3xl font-bold leading-tight text-[#E63946] drop-shadow-[0_2px_0_#FDE68A] mb-3">
+                TACO BURRITO<br><span class="text-[#D97706]">BEER CLINK!</span>
+            </h2>
+
+            <!-- コンパクトな遊び方ガイド -->
+            <div class="bg-[#FEF3C7] border-2 border-[#FDE68A] rounded-2xl p-3 mb-4 text-left text-xs sm:text-[13px] font-bold text-[#5C3A21] space-y-1.5">
+                <div class="flex items-start gap-2">
+                    <span class="bg-[#E63946] text-white rounded-full w-5 h-5 flex items-center justify-center text-[11px] shrink-0 mt-0.5">1</span>
+                    <span>隣と入れ替えて、同じ絵文字を<strong>2つ以上くっつけて</strong>消そう！</span>
+                </div>
+                <div class="flex items-start gap-2">
+                    <span class="bg-[#D97706] text-white rounded-full w-5 h-5 flex items-center justify-center text-[11px] shrink-0 mt-0.5">2</span>
+                    <span>4つ以上消しで<strong>🍻乾杯ボム</strong>出現！タップで周囲3×3を爆破！</span>
+                </div>
+            </div>
+
+            <!-- モード選択トグル -->
+            <div class="bg-[#FEF3C7] p-1 rounded-2xl border-2 border-[#3D2314] flex gap-1.5 mb-4">
+                <button id="start-mode-timed" class="flex-1 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all bg-[#E63946] text-white shadow-sm">
+                    ⏱️ 60秒アタック
+                </button>
+                <button id="start-mode-endless" class="flex-1 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all text-[#3D2314] hover:bg-[#FFFDF5]/70">
+                    ♾️ エンドレス
+                </button>
+            </div>
+
+            <!-- STARTボタン -->
+            <button id="btn-start-game" class="bar-btn w-full bg-[#E63946] hover:bg-[#D62828] text-white font-title font-bold py-3.5 rounded-2xl text-xl sm:text-2xl tracking-wide">
+                START! 🍻
+            </button>
+        </div>
+    </div>
+
+    <!-- メインコンテナ -->
+    <div class="relative z-10 w-full max-w-[450px] flex flex-col items-center gap-2">
+
+        <!-- ヘッダー：タイトルとアクションボタン -->
+        <header class="w-full flex items-center justify-between gap-2">
+            <div class="min-w-0">
+                <h1 class="font-title text-xl sm:text-[1.6rem] leading-tight font-bold tracking-tight text-[#E63946] drop-shadow-[0_2px_0_#FFF] truncate">
+                    TACO BURRITO <span class="text-[#D97706]">BEER CLINK!</span>
+                </h1>
+                <p class="text-[10.5px] sm:text-xs font-bold text-[#40916C] truncate">
+                    隣と入れ替えて、同じ絵文字を2つ以上くっつけて消そう！
+                </p>
+            </div>
+            <div class="flex items-center gap-1.5 shrink-0">
+                <!-- ヒントボタン -->
+                <button id="btn-hint" title="ヒントを見る" aria-label="ヒント" class="bar-btn bg-[#52B788] hover:bg-[#40916C] text-white text-lg w-10 h-10 rounded-xl flex items-center justify-center">
+                    💡
+                </button>
+                <!-- サウンドON/OFF（SE・BGM連動） -->
+                <button id="btn-sound" title="サウンド切り替え" aria-label="サウンド切り替え" class="bar-btn bg-[#FFFDF5] hover:bg-[#FEF3C7] text-lg w-10 h-10 rounded-xl flex items-center justify-center">
+                    🔊
+                </button>
+                <!-- リスタート -->
+                <button id="btn-restart" title="やり直す" aria-label="リスタート" class="bar-btn bg-[#F59E0B] hover:bg-[#D97706] text-[#3D2314] font-bold w-10 h-10 rounded-xl flex items-center justify-center text-lg">
+                    🔄
+                </button>
+            </div>
+        </header>
+
+        <!-- フィエスタ装飾ライン -->
+        <div class="fiesta-stripe"></div>
+
+        <!-- モード切り替えタブ -->
+        <div class="w-full bg-[#FEF3C7] p-1 rounded-2xl border-2 border-[#3D2314] flex gap-1.5">
+            <button id="mode-timed" class="flex-1 py-1.5 rounded-xl font-bold text-xs sm:text-sm transition-all bg-[#E63946] text-white shadow-sm">
+                ⏱️ 60秒アタック
+            </button>
+            <button id="mode-endless" class="flex-1 py-1.5 rounded-xl font-bold text-xs sm:text-sm transition-all text-[#3D2314] hover:bg-[#FFFDF5]/70">
+                ♾️ エンドレス
+            </button>
+        </div>
+
+        <!-- スコア・タイマー・コンボ・ハイスコアバー -->
+        <div class="w-full grid grid-cols-4 gap-1.5">
+            <!-- スコア -->
+            <div class="bg-[#FFFDF5] border-2 border-[#3D2314] rounded-2xl py-1 px-1.5 text-center shadow-[0_3px_0_rgba(61,35,20,0.16)]">
+                <div class="text-[10px] font-bold text-[#7C5338]">スコア</div>
+                <div id="score-display" class="font-title text-base sm:text-xl font-bold text-[#E63946]">0</div>
+            </div>
+            <!-- 残り時間 / モード -->
+            <div class="bg-[#FFFDF5] border-2 border-[#3D2314] rounded-2xl py-1 px-1.5 text-center shadow-[0_3px_0_rgba(61,35,20,0.16)]">
+                <div id="timer-label" class="text-[10px] font-bold text-[#7C5338]">のこり時間</div>
+                <div id="timer-display" class="font-title text-base sm:text-xl font-bold text-[#D97706]">60</div>
+            </div>
+            <!-- コンボ -->
+            <div class="bg-[#FFFDF5] border-2 border-[#3D2314] rounded-2xl py-1 px-1.5 text-center shadow-[0_3px_0_rgba(61,35,20,0.16)]">
+                <div class="text-[10px] font-bold text-[#7C5338]">コンボ</div>
+                <div id="combo-display" class="font-title text-base sm:text-xl font-bold text-[#D97706]">0</div>
+            </div>
+            <!-- ハイスコア -->
+            <div class="bg-[#FFFDF5] border-2 border-[#3D2314] rounded-2xl py-1 px-1.5 text-center shadow-[0_3px_0_rgba(61,35,20,0.16)]">
+                <div class="text-[10px] font-bold text-[#7C5338]">ベスト</div>
+                <div id="highscore-display" class="font-title text-base sm:text-xl font-bold text-[#40916C]">0</div>
+            </div>
+        </div>
+
+        <!-- ゲーム盤面（7×7） -->
+        <div id="game-board-container">
+            <div id="game-board">
+                <!-- 背景グリッド（JSで生成） -->
+                <div id="grid-bg" class="grid-bg"></div>
+                <!-- タイルレイヤー -->
+                <div id="tiles-layer" class="absolute inset-0"></div>
+                <!-- エフェクトレイヤー -->
+                <div id="effects-layer" class="absolute inset-0 pointer-events-none"></div>
+            </div>
+
+            <!-- トースト通知 -->
+            <div id="toast-banner" class="pointer-events-none opacity-0 scale-90 absolute inset-x-0 top-1/2 -translate-y-1/2 flex justify-center z-40">
+                <div id="toast-text" class="bg-[#3D2314] text-[#FFFDF5] font-bold px-5 py-2 rounded-full shadow-lg border-2 border-[#F59E0B] text-sm sm:text-base">
+                    🔀 シャッフルしました！
+                </div>
+            </div>
+
+            <!-- ゲームオーバー結果モーダル -->
+            <div id="gameover-overlay" class="hidden absolute inset-0 bg-[#3D2314]/75 backdrop-blur-[2px] rounded-[18px] z-50 flex flex-col items-center justify-center p-5 text-center">
+                <div class="bg-[#FFFDF5] border-4 border-[#3D2314] rounded-3xl p-5 w-full max-w-[300px] shadow-2xl">
+                    <div class="text-4xl mb-1">🌮🌯🍺</div>
+                    <h2 class="font-title text-2xl font-bold text-[#E63946] mb-1">CHEERS! 終了！</h2>
+                    <p id="new-record-badge" class="hidden inline-block bg-[#F59E0B] text-[#3D2314] text-xs font-extrabold px-3 py-1 rounded-full mb-2.5 border border-[#3D2314]">
+                        🎉 NEW RECORD!
+                    </p>
+                    <div class="grid grid-cols-2 gap-2 mb-4">
+                        <div class="bg-[#FEF3C7] rounded-2xl p-2.5 border-2 border-[#FDE68A]">
+                            <div class="text-[11px] font-bold text-[#7C5338]">最終スコア</div>
+                            <div id="final-score" class="font-title text-2xl font-bold text-[#3D2314]">0</div>
+                        </div>
+                        <div class="bg-[#D8F3DC] rounded-2xl p-2.5 border-2 border-[#95D5B2]">
+                            <div class="text-[11px] font-bold text-[#2D6A4F]">最大コンボ</div>
+                            <div id="final-max-combo" class="font-title text-2xl font-bold text-[#1B4332]">0</div>
+                        </div>
+                    </div>
+                    <button id="btn-play-again" class="bar-btn w-full bg-[#E63946] hover:bg-[#D62828] text-white font-bold py-2.5 rounded-2xl text-base">
+                        もういちど乾杯する！🍻
+                    </button>
+                    <button id="btn-back-title" class="mt-2.5 w-full py-1.5 rounded-xl text-xs font-bold text-[#7C5338] hover:text-[#3D2314] hover:bg-[#FEF3C7] transition-colors">
+                        タイトルへ戻る
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ルール・得点ガイド -->
+        <footer class="w-full bg-[#FFFDF5]/95 border-2 border-[#FDE68A] rounded-2xl px-3 py-2 text-[11px] sm:text-xs text-[#5C3A21] flex flex-col gap-0.5">
+            <div class="flex items-center justify-between flex-wrap gap-1">
+                <span><strong class="text-[#D97706]">🌮 🌯 🍺</strong> 高得点 (150pt)</span>
+                <span><strong class="text-[#40916C]">🥑 🌶️ 🍋</strong> (100pt)</span>
+            </div>
+            <div class="text-[10.5px] text-[#7C5338]">
+                💡 4つ以上の塊を消すと <strong class="text-[#D97706]">🍻乾杯ボム</strong> 出現！タップか入れ替えで周囲3×3を即爆破！
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        /**
+         * ==========================================
+         * 1. 背景のビール泡パーティクル生成
+         * ==========================================
+         */
+        function initBackgroundBubbles() {
+            const container = document.getElementById('bg-bubbles');
+            const bubbleCount = 18;
+            for (let i = 0; i < bubbleCount; i++) {
+                const b = document.createElement('div');
+                b.className = 'bg-bubble';
+                const size = 8 + Math.random() * 18;
+                b.style.width = `${size}px`;
+                b.style.height = `${size}px`;
+                b.style.left = `${Math.random() * 100}%`;
+                b.style.animationDuration = `${7 + Math.random() * 10}s`;
+                b.style.animationDelay = `${Math.random() * 8}s`;
+                container.appendChild(b);
+            }
+        }
+
+        /**
+         * ==========================================
+         * 2. サウンドエンジン (Web Audio API) & BGM管理
+         * ==========================================
+         */
+        const BGM_VOLUME_NORMAL = 0.45;
+        const BGM_VOLUME_GAMEOVER = 0.18;
+
+        class SoundManager {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+                this.bgmAudio = document.getElementById('bgm-audio');
+                if (this.bgmAudio) {
+                    this.bgmAudio.volume = BGM_VOLUME_NORMAL;
+                }
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) {
+                        this.ctx = new AudioCtx();
+                    }
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            /**
+             * BGMを再生開始（ファイルが存在しない環境でのエラーは静かに無視）
+             */
+            tryStartBgm() {
+                if (this.muted || !this.bgmAudio) return;
+                if (this.bgmAudio.paused) {
+                    const playPromise = this.bgmAudio.play();
+                    if (playPromise !== undefined) {
+                        playPromise.catch(() => {});
+                    }
+                }
+            }
+
+            setBgmVolume(vol) {
+                if (this.bgmAudio) {
+                    this.bgmAudio.volume = vol;
+                }
+            }
+
+            toggleMute() {
+                this.muted = !this.muted;
+                if (this.bgmAudio) {
+                    this.bgmAudio.muted = this.muted;
+                    if (this.muted) {
+                        this.bgmAudio.pause();
+                    } else if (hasStarted) {
+                        this.tryStartBgm();
+                    }
+                }
+                return this.muted;
+            }
+
+            playTone(freq, type, duration, volume = 0.14, slideTo = null) {
+                if (this.muted) return;
+                this.init();
+                if (!this.ctx) return;
+
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = type;
+                osc.frequency.setValueAtTime(freq, now);
+                if (slideTo) {
+                    osc.frequency.exponentialRampToValueAtTime(slideTo, now + duration);
+                }
+
+                gain.gain.setValueAtTime(volume, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + duration);
+            }
+
+            playSelect() {
+                this.playTone(560, 'sine', 0.08, 0.11, 720);
+            }
+
+            playSwap() {
+                this.playTone(360, 'triangle', 0.09, 0.1, 500);
+            }
+
+            playInvalid() {
+                this.playTone(210, 'sawtooth', 0.13, 0.08, 145);
+            }
+
+            playClinkPop(combo = 1) {
+                const baseFreqs = [523.25, 587.33, 659.25, 783.99, 880.00, 1046.50, 1174.66, 1318.51];
+                const freq = baseFreqs[Math.min(combo - 1, baseFreqs.length - 1)];
+                this.playTone(freq, 'sine', 0.14, 0.15, freq * 1.3);
+                setTimeout(() => {
+                    this.playTone(freq * 1.5, 'triangle', 0.13, 0.1, freq * 1.85);
+                }, 45);
+            }
+
+            playSpecialBlast() {
+                if (this.muted) return;
+                this.init();
+                if (!this.ctx) return;
+                this.playTone(170, 'sawtooth', 0.25, 0.17, 48);
+                setTimeout(() => this.playTone(987.77, 'sine', 0.16, 0.14, 1480), 30);
+                setTimeout(() => this.playTone(1318.5, 'triangle', 0.22, 0.12, 1975), 80);
+            }
+
+            playGameOver() {
+                const notes = [523.25, 659.25, 587.33, 392.00];
+                notes.forEach((n, i) => {
+                    setTimeout(() => this.playTone(n, 'triangle', 0.22, 0.14), i * 135);
+                });
+            }
+        }
+
+        /**
+         * ==========================================
+         * 3. ゲーム定数と設定（7×7盤面・6種類）
+         * ==========================================
+         */
+        const GRID_SIZE = 7;
+        const GAP_PX = 5;
+        const GAME_DURATION = 60;
+
+        // 絵文字データ（計6種類：主役3種 150pt、サブ3種 100pt）
+        const TILE_TYPES = [
+            { id: 'taco',    emoji: '🌮', isMain: true,  points: 150, color: '#F59E0B' },
+            { id: 'burrito', emoji: '🌯', isMain: true,  points: 150, color: '#D97706' },
+            { id: 'beer',    emoji: '🍺', isMain: true,  points: 150, color: '#EAB308' },
+            { id: 'avocado', emoji: '🥑', isMain: false, points: 100, color: '#40916C' },
+            { id: 'chili',   emoji: '🌶️', isMain: false, points: 100, color: '#E63946' },
+            { id: 'lime',    emoji: '🍋', isMain: false, points: 100, color: '#84CC16' }
+        ];
+
+        const DIRS = [
+            [-1, 0], [1, 0], [0, -1], [0, 1]
+        ];
+
+        const sound = new SoundManager();
+
+        /**
+         * ==========================================
+         * 4. ゲーム状態管理
+         * ==========================================
+         */
+        let board = [];
+        let nextTileId = 1;
+        let selectedPos = null;
+        let isProcessing = false;
+        let score = 0;
+        let currentCombo = 0;
+        let maxCombo = 0;
+        let mode = 'timed'; // 'timed' | 'endless'
+        let timeLeft = GAME_DURATION;
+        let timerInterval = null;
+        let isGameOver = false;
+        let hasStarted = false;
+        let hintTimeout = null;
+
+        // スワイプ・ドラッグ操作用
+        let pointerStart = null;
+
+        // DOM要素
+        const startOverlayEl = document.getElementById('start-overlay');
+        const gridBgEl = document.getElementById('grid-bg');
+        const tilesLayerEl = document.getElementById('tiles-layer');
+        const effectsLayerEl = document.getElementById('effects-layer');
+        const scoreDisplayEl = document.getElementById('score-display');
+        const timerLabelEl = document.getElementById('timer-label');
+        const timerDisplayEl = document.getElementById('timer-display');
+        const comboDisplayEl = document.getElementById('combo-display');
+        const highscoreDisplayEl = document.getElementById('highscore-display');
+        const gameoverOverlayEl = document.getElementById('gameover-overlay');
+        const finalScoreEl = document.getElementById('final-score');
+        const finalMaxComboEl = document.getElementById('final-max-combo');
+        const newRecordBadgeEl = document.getElementById('new-record-badge');
+        const toastBannerEl = document.getElementById('toast-banner');
+        const toastTextEl = document.getElementById('toast-text');
+
+        /**
+         * ==========================================
+         * 5. 初期化・盤面構築（初期状態は隣接なし）
+         * ==========================================
+         */
+        function initGridBg() {
+            gridBgEl.innerHTML = '';
+            for (let i = 0; i < GRID_SIZE * GRID_SIZE; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'grid-cell';
+                gridBgEl.appendChild(cell);
+            }
+        }
+
+        function getHighScoreKey() {
+            return `tbb_clink_highscore_${mode}`;
+        }
+
+        function loadHighScore() {
+            try {
+                const saved = localStorage.getItem(getHighScoreKey());
+                return saved ? parseInt(saved, 10) : 0;
+            } catch (e) {
+                return 0;
+            }
+        }
+
+        function saveHighScore(newScore) {
+            try {
+                localStorage.setItem(getHighScoreKey(), String(newScore));
+            } catch (e) {
+                // localStorage不可環境では無視
+            }
+        }
+
+        function updateUI() {
+            scoreDisplayEl.textContent = score.toLocaleString();
+            comboDisplayEl.textContent = currentCombo > 0 ? `${currentCombo}` : '0';
+            comboDisplayEl.classList.toggle('text-[#E63946]', currentCombo >= 3);
+            comboDisplayEl.classList.toggle('text-[#D97706]', currentCombo < 3);
+
+            const best = Math.max(loadHighScore(), score);
+            highscoreDisplayEl.textContent = best.toLocaleString();
+
+            if (mode === 'timed') {
+                timerLabelEl.textContent = 'のこり時間';
+                timerDisplayEl.textContent = timeLeft;
+                timerDisplayEl.classList.toggle('text-[#E63946]', timeLeft <= 10);
+                timerDisplayEl.classList.toggle('text-[#D97706]', timeLeft > 10);
+            } else {
+                timerLabelEl.textContent = 'モード';
+                timerDisplayEl.textContent = '♾️';
+                timerDisplayEl.classList.remove('text-[#E63946]', 'text-[#D97706]');
+                timerDisplayEl.classList.add('text-[#40916C]');
+            }
+        }
+
+        function startGame() {
+            clearInterval(timerInterval);
+            clearHint();
+            hasStarted = true;
+            isGameOver = false;
+            isProcessing = false;
+            selectedPos = null;
+            score = 0;
+            currentCombo = 0;
+            maxCombo = 0;
+            timeLeft = GAME_DURATION;
+            gameoverOverlayEl.classList.add('hidden');
+            tilesLayerEl.innerHTML = '';
+            effectsLayerEl.innerHTML = '';
+
+            // BGM音量を通常（0.45）に戻して再生
+            sound.setBgmVolume(BGM_VOLUME_NORMAL);
+            sound.tryStartBgm();
+
+            createInitialBoard();
+            updateUI();
+
+            if (mode === 'timed') {
+                timerInterval = setInterval(() => {
+                    if (isGameOver) return;
+                    timeLeft--;
+                    updateUI();
+                    if (timeLeft <= 0) {
+                        endGame();
+                    }
+                }, 1000);
+            }
+
+            scheduleHint();
+        }
+
+        /**
+         * タイトル（スタート画面）を表示する
+         */
+        function showStartScreen() {
+            clearInterval(timerInterval);
+            clearHint();
+            hasStarted = false;
+            isGameOver = false;
+            isProcessing = false;
+            selectedPos = null;
+            timeLeft = GAME_DURATION;
+            gameoverOverlayEl.classList.add('hidden');
+            startOverlayEl.classList.remove('hidden-overlay');
+            sound.setBgmVolume(BGM_VOLUME_GAMEOVER);
+            updateUI();
+        }
+
+        /**
+         * 同じ絵文字が上下左右に一切隣り合わない初期盤面を生成
+         */
+        function createInitialBoard() {
+            board = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(null));
+
+            for (let r = 0; r < GRID_SIZE; r++) {
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    const forbidden = new Set();
+                    if (r > 0 && board[r - 1][c]) forbidden.add(board[r - 1][c].typeIndex);
+                    if (c > 0 && board[r][c - 1]) forbidden.add(board[r][c - 1].typeIndex);
+
+                    const candidates = [];
+                    for (let t = 0; t < TILE_TYPES.length; t++) {
+                        if (!forbidden.has(t)) candidates.push(t);
+                    }
+                    const typeIndex = candidates[Math.floor(Math.random() * candidates.length)];
+                    board[r][c] = createTileObject(r, c, typeIndex, false, r - GRID_SIZE);
+                }
+            }
+
+            if (!findValidMove()) {
+                tilesLayerEl.innerHTML = '';
+                createInitialBoard();
+                return;
+            }
+
+            requestAnimationFrame(() => {
+                for (let r = 0; r < GRID_SIZE; r++) {
+                    for (let c = 0; c < GRID_SIZE; c++) {
+                        positionTileElement(board[r][c], r, c);
+                    }
+                }
+            });
+        }
+
+        function createTileObject(r, c, typeIndex, special = false, startRow = r) {
+            const tileData = TILE_TYPES[typeIndex];
+            const el = document.createElement('div');
+            el.className = 'tile' + (special ? ' special' : '');
+            el.dataset.id = nextTileId++;
+
+            const inner = document.createElement('div');
+            inner.className = 'tile-inner';
+            inner.textContent = tileData.emoji;
+
+            if (special) {
+                const badge = document.createElement('span');
+                badge.className = 'special-badge';
+                badge.textContent = '🍻';
+                inner.appendChild(badge);
+            }
+
+            el.appendChild(inner);
+            tilesLayerEl.appendChild(el);
+
+            const tileObj = {
+                id: el.dataset.id,
+                typeIndex,
+                special,
+                el
+            };
+
+            positionTileElement(tileObj, startRow, c);
+            attachTileEvents(el, tileObj);
+            return tileObj;
+        }
+
+        function getTileCoords(r, c) {
+            const totalGap = (GRID_SIZE - 1) * GAP_PX;
+            const left = `calc(${c} * ((100% - ${totalGap}px) / ${GRID_SIZE} + ${GAP_PX}px))`;
+            const top = `calc(${r} * ((100% - ${totalGap}px) / ${GRID_SIZE} + ${GAP_PX}px))`;
+            return { left, top };
+        }
+
+        function positionTileElement(tileObj, r, c) {
+            if (!tileObj || !tileObj.el) return;
+            const { left, top } = getTileCoords(r, c);
+            tileObj.el.style.left = left;
+            tileObj.el.style.top = top;
+        }
+
+        function findTilePosition(tileObj) {
+            for (let r = 0; r < GRID_SIZE; r++) {
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    if (board[r][c] === tileObj) return { r, c };
+                }
+            }
+            return null;
+        }
+
+        /**
+         * ==========================================
+         * 6. ユーザー操作（クリック・タップ・スワイプ）
+         * ==========================================
+         */
+        function attachTileEvents(el, tileObj) {
+            const onStart = (clientX, clientY) => {
+                if (isProcessing || isGameOver) return;
+                sound.init();
+                clearHint();
+                const pos = findTilePosition(tileObj);
+                if (!pos) return;
+                pointerStart = { r: pos.r, c: pos.c, x: clientX, y: clientY, swiped: false };
+            };
+
+            const onMove = (clientX, clientY) => {
+                if (!pointerStart || pointerStart.swiped || isProcessing || isGameOver) return;
+                const dx = clientX - pointerStart.x;
+                const dy = clientY - pointerStart.y;
+                const threshold = 22;
+
+                if (Math.abs(dx) > threshold || Math.abs(dy) > threshold) {
+                    pointerStart.swiped = true;
+                    let targetR = pointerStart.r;
+                    let targetC = pointerStart.c;
+
+                    if (Math.abs(dx) > Math.abs(dy)) {
+                        targetC += dx > 0 ? 1 : -1;
+                    } else {
+                        targetR += dy > 0 ? 1 : -1;
+                    }
+
+                    clearSelection();
+                    if (targetR >= 0 && targetR < GRID_SIZE && targetC >= 0 && targetC < GRID_SIZE) {
+                        attemptSwap(pointerStart.r, pointerStart.c, targetR, targetC);
+                    }
+                    pointerStart = null;
+                }
+            };
+
+            const onEnd = () => {
+                if (pointerStart && !pointerStart.swiped && !isProcessing && !isGameOver) {
+                    handleTileClick(pointerStart.r, pointerStart.c);
+                }
+                pointerStart = null;
+            };
+
+            // マウスイベント
+            el.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                onStart(e.clientX, e.clientY);
+            });
+            window.addEventListener('mousemove', (e) => {
+                if (pointerStart) onMove(e.clientX, e.clientY);
+            });
+            window.addEventListener('mouseup', () => {
+                if (pointerStart) onEnd();
+            });
+
+            // タッチイベント
+            el.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    onStart(e.touches[0].clientX, e.touches[0].clientY);
+                }
+            }, { passive: true });
+
+            el.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 1 && pointerStart) {
+                    onMove(e.touches[0].clientX, e.touches[0].clientY);
+                }
+            }, { passive: true });
+
+            el.addEventListener('touchend', () => {
+                onEnd();
+            });
+        }
+
+        function handleTileClick(r, c) {
+            const clickedTile = board[r][c];
+            if (!clickedTile) return;
+
+            // スペシャルタイル（🍻乾杯ボム）はタップだけで即発動！
+            if (clickedTile.special && !selectedPos) {
+                triggerSpecialAt(r, c);
+                return;
+            }
+
+            if (!selectedPos) {
+                selectedPos = { r, c };
+                clickedTile.el.classList.add('selected');
+                sound.playSelect();
+            } else if (selectedPos.r === r && selectedPos.c === c) {
+                clearSelection();
+            } else {
+                const dist = Math.abs(selectedPos.r - r) + Math.abs(selectedPos.c - c);
+                if (dist === 1) {
+                    const prev = selectedPos;
+                    clearSelection();
+                    attemptSwap(prev.r, prev.c, r, c);
+                } else {
+                    clearSelection();
+                    if (clickedTile.special) {
+                        triggerSpecialAt(r, c);
+                    } else {
+                        selectedPos = { r, c };
+                        clickedTile.el.classList.add('selected');
+                        sound.playSelect();
+                    }
+                }
+            }
+        }
+
+        function clearSelection() {
+            if (selectedPos && board[selectedPos.r][selectedPos.c]) {
+                board[selectedPos.r][selectedPos.c].el.classList.remove('selected');
+            }
+            selectedPos = null;
+        }
+
+        /**
+         * ==========================================
+         * 7. スワップ・クラスター判定・乾杯ボム・連鎖処理
+         * ==========================================
+         */
+        const delay = (ms) => new Promise(res => setTimeout(res, ms));
+
+        /**
+         * 上下左右に2つ以上つながった同じ絵文字の塊（クラスター）をすべて抽出
+         */
+        function findClusters() {
+            const visited = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(false));
+            const clusters = [];
+
+            for (let r = 0; r < GRID_SIZE; r++) {
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    const tile = board[r][c];
+                    if (!tile || visited[r][c]) continue;
+
+                    const group = [];
+                    const queue = [{ r, c }];
+                    visited[r][c] = true;
+
+                    while (queue.length > 0) {
+                        const curr = queue.shift();
+                        group.push(curr);
+
+                        for (const [dr, dc] of DIRS) {
+                            const nr = curr.r + dr;
+                            const nc = curr.c + dc;
+                            if (
+                                nr >= 0 && nr < GRID_SIZE &&
+                                nc >= 0 && nc < GRID_SIZE &&
+                                !visited[nr][nc] &&
+                                board[nr][nc] &&
+                                board[nr][nc].typeIndex === tile.typeIndex
+                            ) {
+                                visited[nr][nc] = true;
+                                queue.push({ r: nr, c: nc });
+                            }
+                        }
+                    }
+
+                    // 2つ以上くっついていれば消去対象！
+                    if (group.length >= 2) {
+                        clusters.push({ typeIndex: tile.typeIndex, cells: group });
+                    }
+                }
+            }
+            return clusters;
+        }
+
+        /**
+         * スペシャルタイルをタップで即発動
+         */
+        async function triggerSpecialAt(r, c) {
+            isProcessing = true;
+            currentCombo = 0;
+            await processRemovalLoop([], [{ r, c }], null);
+            await postTurnCheck();
+            isProcessing = false;
+            scheduleHint();
+        }
+
+        /**
+         * 隣り合う2タイルの入れ替え処理
+         */
+        async function attemptSwap(r1, c1, r2, c2) {
+            isProcessing = true;
+            currentCombo = 0;
+            sound.playSwap();
+
+            swapInBoard(r1, c1, r2, c2);
+            await delay(200);
+
+            const t1 = board[r1][c1];
+            const t2 = board[r2][c2];
+            const specialTriggers = [];
+            if (t1 && t1.special) specialTriggers.push({ r: r1, c: c1 });
+            if (t2 && t2.special) specialTriggers.push({ r: r2, c: c2 });
+
+            const clusters = findClusters();
+
+            // どの同じ絵文字もくっつかず、スペシャルも発動しない場合はブルッと震えて戻る
+            if (clusters.length === 0 && specialTriggers.length === 0) {
+                sound.playInvalid();
+                if (t1) t1.el.classList.add('invalid-shake');
+                if (t2) t2.el.classList.add('invalid-shake');
+                await delay(240);
+                if (t1) t1.el.classList.remove('invalid-shake');
+                if (t2) t2.el.classList.remove('invalid-shake');
+
+                swapInBoard(r1, c1, r2, c2);
+                await delay(200);
+                isProcessing = false;
+                scheduleHint();
+                return;
+            }
+
+            await processRemovalLoop(clusters, specialTriggers, { r: r2, c: c2 });
+            await postTurnCheck();
+
+            isProcessing = false;
+            scheduleHint();
+        }
+
+        function swapInBoard(r1, c1, r2, c2) {
+            const temp = board[r1][c1];
+            board[r1][c1] = board[r2][c2];
+            board[r2][c2] = temp;
+            positionTileElement(board[r1][c1], r1, c1);
+            positionTileElement(board[r2][c2], r2, c2);
+        }
+
+        /**
+         * くっついたクラスター＆乾杯ボムの消去・連鎖ループ
+         */
+        async function processRemovalLoop(initialClusters, initialSpecialTriggers = [], swappedPos = null) {
+            let clusters = initialClusters;
+            let specialTriggers = initialSpecialTriggers;
+
+            while (clusters.length > 0 || specialTriggers.length > 0) {
+                currentCombo++;
+                if (currentCombo > maxCombo) maxCombo = currentCombo;
+                updateUI();
+
+                const toRemove = new Map();
+                const specialSpawns = [];
+
+                // 1. クラスターの収集＆4つ以上の塊なら🍻乾杯ボム生成予約
+                clusters.forEach(cluster => {
+                    cluster.cells.forEach(cell => {
+                        toRemove.set(`${cell.r},${cell.c}`, cell);
+                    });
+
+                    if (cluster.cells.length >= 4) {
+                        let spawnCell = cluster.cells[Math.floor(cluster.cells.length / 2)];
+                        if (swappedPos && cluster.cells.some(c => c.r === swappedPos.r && c.c === swappedPos.c)) {
+                            spawnCell = swappedPos;
+                        }
+                        specialSpawns.push({ r: spawnCell.r, c: spawnCell.c, typeIndex: cluster.typeIndex });
+                    }
+                });
+
+                // 2. 直接発動したスペシャルタイルも消去対象へ
+                specialTriggers.forEach(cell => {
+                    if (board[cell.r][cell.c]) {
+                        toRemove.set(`${cell.r},${cell.c}`, cell);
+                    }
+                });
+
+                // 3. 消去対象にスペシャルタイルが含まれていれば周囲3×3を巻き込む（連鎖爆破対応）
+                let triggeredSpecial = specialTriggers.length > 0;
+                const queue = Array.from(toRemove.values());
+                while (queue.length > 0) {
+                    const cell = queue.shift();
+                    const tile = board[cell.r][cell.c];
+                    if (tile && tile.special) {
+                        triggeredSpecial = true;
+                        for (let dr = -1; dr <= 1; dr++) {
+                            for (let dc = -1; dc <= 1; dc++) {
+                                const nr = cell.r + dr;
+                                const nc = cell.c + dc;
+                                const key = `${nr},${nc}`;
+                                if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE && !toRemove.has(key) && board[nr][nc]) {
+                                    const newCell = { r: nr, c: nc };
+                                    toRemove.set(key, newCell);
+                                    queue.push(newCell);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 4. くっついたタイル同士を中心に向かって一瞬ギュッと引き寄せるアニメーション
+                clusters.forEach(cluster => {
+                    let avgR = 0, avgC = 0;
+                    cluster.cells.forEach(({ r, c }) => { avgR += r; avgC += c; });
+                    avgR /= cluster.cells.length;
+                    avgC /= cluster.cells.length;
+
+                    cluster.cells.forEach(({ r, c }) => {
+                        const tile = board[r][c];
+                        if (!tile) return;
+                        const pullX = (avgC - c) * 14;
+                        const pullY = (avgR - r) * 14;
+                        tile.el.style.setProperty('--pull-x', `${pullX}px`);
+                        tile.el.style.setProperty('--pull-y', `${pullY}px`);
+                        tile.el.classList.add('clinking');
+                    });
+                });
+
+                if (clusters.length > 0) {
+                    await delay(145);
+                }
+
+                // 5. 効果音
+                if (triggeredSpecial) {
+                    sound.playSpecialBlast();
+                } else {
+                    sound.playClinkPop(currentCombo);
+                }
+
+                // 6. 弾けて消える演出＆スコア計算
+                let earnedPoints = 0;
+                let centerR = 0, centerC = 0;
+                const cellsArray = Array.from(toRemove.values());
+
+                cellsArray.forEach(({ r, c }) => {
+                    const tile = board[r][c];
+                    if (!tile) return;
+                    const typeData = TILE_TYPES[tile.typeIndex];
+                    earnedPoints += typeData.points;
+                    centerR += r;
+                    centerC += c;
+
+                    tile.el.classList.remove('clinking');
+                    tile.el.classList.add('popping');
+                    spawnParticles(r, c, typeData.emoji, tile.special || triggeredSpecial);
+                });
+
+                // コンボ倍率＋乾杯ボムボーナス
+                const comboMultiplier = 1 + (currentCombo - 1) * 0.4;
+                const finalPoints = Math.round(earnedPoints * comboMultiplier) + (triggeredSpecial ? 300 : 0);
+                score += finalPoints;
+                if (score > loadHighScore()) {
+                    saveHighScore(score);
+                }
+                updateUI();
+
+                // ポップアップテキスト
+                if (cellsArray.length > 0) {
+                    centerR /= cellsArray.length;
+                    centerC /= cellsArray.length;
+                    let popupLabel = `+${finalPoints}`;
+                    if (triggeredSpecial) {
+                        popupLabel = `CHEERS! 🍻 +${finalPoints}`;
+                    } else if (currentCombo >= 3) {
+                        popupLabel = `${currentCombo} COMBO! 🍻 +${finalPoints}`;
+                    } else if (currentCombo === 2) {
+                        popupLabel = `2 COMBO! +${finalPoints}`;
+                    }
+                    const popupColor = triggeredSpecial ? '#E63946' : (currentCombo > 1 ? '#D97706' : '#3D2314');
+                    spawnFloatText(centerR, centerC, popupLabel, popupColor, currentCombo > 1 || triggeredSpecial);
+                }
+
+                await delay(180);
+
+                // 7. DOM削除
+                cellsArray.forEach(({ r, c }) => {
+                    if (board[r][c]) {
+                        board[r][c].el.remove();
+                        board[r][c] = null;
+                    }
+                });
+
+                // 8. 🍻乾杯ボム配置
+                specialSpawns.forEach(sp => {
+                    if (!board[sp.r][sp.c]) {
+                        board[sp.r][sp.c] = createTileObject(sp.r, sp.c, sp.typeIndex, true, sp.r);
+                    }
+                });
+
+                // 9. 落下＆補充（3連鎖以上時は周囲と被りにくい絵文字を少し優先）
+                await dropAndRefill(currentCombo);
+
+                swappedPos = null;
+                specialTriggers = [];
+                clusters = findClusters();
+            }
+        }
+
+        /**
+         * 落下＆補充（3連鎖以上続いた場合は無限連鎖を防ぐため周囲と被りにくい絵文字を優先）
+         */
+        async function dropAndRefill(comboCount) {
+            for (let c = 0; c < GRID_SIZE; c++) {
+                let emptyRow = GRID_SIZE - 1;
+                for (let r = GRID_SIZE - 1; r >= 0; r--) {
+                    if (board[r][c]) {
+                        if (r !== emptyRow) {
+                            board[emptyRow][c] = board[r][c];
+                            board[r][c] = null;
+                            positionTileElement(board[emptyRow][c], emptyRow, c);
+                        }
+                        emptyRow--;
+                    }
+                }
+
+                let spawnOffset = 1;
+                for (let r = emptyRow; r >= 0; r--) {
+                    const typeIndex = pickRefillType(r, c, comboCount);
+                    const newTile = createTileObject(r, c, typeIndex, false, -spawnOffset);
+                    board[r][c] = newTile;
+                    spawnOffset++;
+                    requestAnimationFrame(() => {
+                        positionTileElement(newTile, r, c);
+                    });
+                }
+            }
+            await delay(245);
+        }
+
+        function pickRefillType(r, c, comboCount) {
+            // 3連鎖未満は完全ランダムで爽快に連鎖させる
+            if (comboCount < 3) {
+                return Math.floor(Math.random() * TILE_TYPES.length);
+            }
+
+            // 3連鎖以上は周囲（下・左・右）と被りにくい絵文字を優先（78%の確率で回避）
+            const avoid = new Set();
+            if (r + 1 < GRID_SIZE && board[r + 1][c]) avoid.add(board[r + 1][c].typeIndex);
+            if (c - 1 >= 0 && board[r][c - 1]) avoid.add(board[r][c - 1].typeIndex);
+            if (c + 1 < GRID_SIZE && board[r][c + 1]) avoid.add(board[r][c + 1].typeIndex);
+
+            const safe = [];
+            for (let t = 0; t < TILE_TYPES.length; t++) {
+                if (!avoid.has(t)) safe.push(t);
+            }
+
+            if (safe.length > 0 && Math.random() < 0.78) {
+                return safe[Math.floor(Math.random() * safe.length)];
+            }
+            return Math.floor(Math.random() * TILE_TYPES.length);
+        }
+
+        async function postTurnCheck() {
+            if (!isGameOver && !findValidMove()) {
+                await shuffleBoard();
+            }
+        }
+
+        /**
+         * ==========================================
+         * 8. 手詰まり判定・シャッフル・ヒント
+         * ==========================================
+         */
+        function findValidMove() {
+            // スペシャルタイルがあればそれ自体が有効手
+            for (let r = 0; r < GRID_SIZE; r++) {
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    if (board[r][c] && board[r][c].special) {
+                        return [{ r, c }];
+                    }
+                }
+            }
+
+            // 隣と入れ替えて2つ以上くっつく手を探す
+            for (let r = 0; r < GRID_SIZE; r++) {
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    if (c + 1 < GRID_SIZE && checkSwapCreatesCluster(r, c, r, c + 1)) {
+                        return [{ r, c }, { r, c: c + 1 }];
+                    }
+                    if (r + 1 < GRID_SIZE && checkSwapCreatesCluster(r, c, r + 1, c)) {
+                        return [{ r, c }, { r: r + 1, c }];
+                    }
+                }
+            }
+            return null;
+        }
+
+        function checkSwapCreatesCluster(r1, c1, r2, c2) {
+            const t1 = board[r1][c1];
+            const t2 = board[r2][c2];
+            if (!t1 || !t2 || t1.typeIndex === t2.typeIndex) return false;
+
+            board[r1][c1] = t2;
+            board[r2][c2] = t1;
+            const ok = hasAdjacentSame(r1, c1) || hasAdjacentSame(r2, c2);
+            board[r1][c1] = t1;
+            board[r2][c2] = t2;
+            return ok;
+        }
+
+        function hasAdjacentSame(r, c) {
+            const tile = board[r][c];
+            if (!tile) return false;
+            for (const [dr, dc] of DIRS) {
+                const nr = r + dr;
+                const nc = c + dc;
+                if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE && board[nr][nc] && board[nr][nc].typeIndex === tile.typeIndex) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        async function shuffleBoard() {
+            showToast('🔀 手詰まり！シャッフルします');
+            await delay(550);
+
+            const allTiles = [];
+            for (let r = 0; r < GRID_SIZE; r++) {
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    allTiles.push(board[r][c]);
+                }
+            }
+
+            let attempts = 0;
+            do {
+                for (let i = allTiles.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [allTiles[i], allTiles[j]] = [allTiles[j], allTiles[i]];
+                }
+                let idx = 0;
+                for (let r = 0; r < GRID_SIZE; r++) {
+                    for (let c = 0; c < GRID_SIZE; c++) {
+                        board[r][c] = allTiles[idx++];
+                    }
+                }
+                attempts++;
+            } while ((findClusters().length > 0 || !findValidMove()) && attempts < 80);
+
+            // 万一ランダムシャッフルで収束しなければ隣接なし盤面を再生成
+            if (findClusters().length > 0 || !findValidMove()) {
+                tilesLayerEl.innerHTML = '';
+                createInitialBoard();
+                return;
+            }
+
+            for (let r = 0; r < GRID_SIZE; r++) {
+                for (let c = 0; c < GRID_SIZE; c++) {
+                    positionTileElement(board[r][c], r, c);
+                }
+            }
+            await delay(280);
+        }
+
+        function showHintNow() {
+            if (isProcessing || isGameOver) return;
+            clearHint();
+            const move = findValidMove();
+            if (move) {
+                move.forEach(pos => {
+                    if (board[pos.r][pos.c]) {
+                        board[pos.r][pos.c].el.classList.add('hint');
+                    }
+                });
+            }
+        }
+
+        function scheduleHint() {
+            clearHint();
+            if (isGameOver) return;
+            hintTimeout = setTimeout(() => {
+                showHintNow();
+            }, 5000);
+        }
+
+        function clearHint() {
+            if (hintTimeout) clearTimeout(hintTimeout);
+            document.querySelectorAll('.tile.hint').forEach(el => el.classList.remove('hint'));
+        }
+
+        /**
+         * ==========================================
+         * 9. エフェクト・通知・ゲーム終了
+         * ==========================================
+         */
+        function spawnParticles(r, c, emoji, isSpecial) {
+            const { left, top } = getTileCoords(r + 0.5, c + 0.5);
+            const count = isSpecial ? 10 : 5;
+            const symbols = isSpecial ? ['🍻', '✨', '🫧', emoji, '💥'] : [emoji, '✨', '🫧'];
+
+            for (let i = 0; i < count; i++) {
+                const p = document.createElement('div');
+                p.className = 'particle';
+                p.textContent = symbols[i % symbols.length];
+                p.style.left = left;
+                p.style.top = top;
+
+                const angle = (Math.PI * 2 * i) / count + (Math.random() * 0.5);
+                const dist = (isSpecial ? 54 : 30) + Math.random() * 24;
+                p.style.setProperty('--dx', `${Math.cos(angle) * dist}px`);
+                p.style.setProperty('--dy', `${Math.sin(angle) * dist}px`);
+                p.style.setProperty('--rot', `${(Math.random() - 0.5) * 360}deg`);
+
+                effectsLayerEl.appendChild(p);
+                setTimeout(() => p.remove(), 680);
+            }
+        }
+
+        function spawnFloatText(r, c, text, color, isBig = false) {
+            const { left, top } = getTileCoords(r + 0.5, c + 0.5);
+            const el = document.createElement('div');
+            el.className = 'float-text ' + (isBig ? 'text-lg sm:text-xl' : 'text-sm sm:text-base');
+            el.style.left = left;
+            el.style.top = top;
+            el.style.color = color;
+            el.textContent = text;
+            effectsLayerEl.appendChild(el);
+            setTimeout(() => el.remove(), 940);
+        }
+
+        function showToast(message) {
+            toastTextEl.textContent = message;
+            toastBannerEl.classList.remove('opacity-0', 'scale-90');
+            toastBannerEl.classList.add('opacity-100', 'scale-100');
+            setTimeout(() => {
+                toastBannerEl.classList.remove('opacity-100', 'scale-100');
+                toastBannerEl.classList.add('opacity-0', 'scale-90');
+            }, 1450);
+        }
+
+        function endGame() {
+            isGameOver = true;
+            clearInterval(timerInterval);
+            clearHint();
+            sound.setBgmVolume(BGM_VOLUME_GAMEOVER);
+            sound.playGameOver();
+
+            const prevBest = loadHighScore();
+            const isNewRecord = score > 0 && score >= prevBest;
+            if (score > prevBest) {
+                saveHighScore(score);
+            }
+
+            finalScoreEl.textContent = score.toLocaleString();
+            finalMaxComboEl.textContent = `${maxCombo}回`;
+            newRecordBadgeEl.classList.toggle('hidden', !isNewRecord);
+            gameoverOverlayEl.classList.remove('hidden');
+        }
+
+        /**
+         * ==========================================
+         * 10. UIイベントリスナー
+         * ==========================================
+         */
+        const btnTimed = document.getElementById('mode-timed');
+        const btnEndless = document.getElementById('mode-endless');
+        const startBtnTimed = document.getElementById('start-mode-timed');
+        const startBtnEndless = document.getElementById('start-mode-endless');
+
+        function syncModeButtons() {
+            if (mode === 'timed') {
+                btnTimed.className = 'flex-1 py-1.5 rounded-xl font-bold text-xs sm:text-sm transition-all bg-[#E63946] text-white shadow-sm';
+                btnEndless.className = 'flex-1 py-1.5 rounded-xl font-bold text-xs sm:text-sm transition-all text-[#3D2314] hover:bg-[#FFFDF5]/70';
+                startBtnTimed.className = 'flex-1 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all bg-[#E63946] text-white shadow-sm';
+                startBtnEndless.className = 'flex-1 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all text-[#3D2314] hover:bg-[#FFFDF5]/70';
+            } else {
+                btnEndless.className = 'flex-1 py-1.5 rounded-xl font-bold text-xs sm:text-sm transition-all bg-[#40916C] text-white shadow-sm';
+                btnTimed.className = 'flex-1 py-1.5 rounded-xl font-bold text-xs sm:text-sm transition-all text-[#3D2314] hover:bg-[#FFFDF5]/70';
+                startBtnEndless.className = 'flex-1 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all bg-[#40916C] text-white shadow-sm';
+                startBtnTimed.className = 'flex-1 py-2 rounded-xl font-bold text-xs sm:text-sm transition-all text-[#3D2314] hover:bg-[#FFFDF5]/70';
+            }
+        }
+
+        function setMode(newMode, restartIfStarted = true) {
+            if (mode === newMode) return;
+            sound.playSelect();
+            mode = newMode;
+            syncModeButtons();
+            updateUI();
+            if (restartIfStarted && hasStarted) {
+                startGame();
+            }
+        }
+
+        document.getElementById('btn-start-game').addEventListener('click', () => {
+            sound.init();
+            sound.playSelect();
+            startOverlayEl.classList.add('hidden-overlay');
+            startGame();
+        });
+
+        startBtnTimed.addEventListener('click', () => setMode('timed', false));
+        startBtnEndless.addEventListener('click', () => setMode('endless', false));
+
+        document.getElementById('btn-hint').addEventListener('click', () => {
+            sound.playSelect();
+            showHintNow();
+        });
+
+        document.getElementById('btn-sound').addEventListener('click', (e) => {
+            const isMuted = sound.toggleMute();
+            e.currentTarget.textContent = isMuted ? '🔇' : '🔊';
+        });
+
+        document.getElementById('btn-restart').addEventListener('click', () => {
+            sound.playSelect();
+            startGame();
+        });
+
+        document.getElementById('btn-play-again').addEventListener('click', () => {
+            sound.playSelect();
+            startGame();
+        });
+
+        document.getElementById('btn-back-title').addEventListener('click', () => {
+            sound.playSelect();
+            showStartScreen();
+        });
+
+        btnTimed.addEventListener('click', () => setMode('timed', true));
+        btnEndless.addEventListener('click', () => setMode('endless', true));
+
+        // 起動（スタート画面を表示し、タイマーはまだ開始しない）
+        window.onload = () => {
+            initBackgroundBubbles();
+            initGridBg();
+            syncModeButtons();
+            createInitialBoard();
+            updateUI();
+        };
+    </script>
+</body>
+</html>
