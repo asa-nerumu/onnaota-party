@@ -680,6 +680,7 @@
         let isGameOver = false;
         let hasStarted = false;
         let hintTimeout = null;
+        let gameSessionId = 0;
 
         // スワイプ・ドラッグ操作用
         let pointerStart = null;
@@ -759,6 +760,7 @@
         }
 
         function startGame() {
+            gameSessionId++;
             clearInterval(timerInterval);
             clearHint();
             hasStarted = true;
@@ -798,6 +800,7 @@
          * タイトル（スタート画面）を表示する
          */
         function showStartScreen() {
+            gameSessionId++;
             clearInterval(timerInterval);
             clearHint();
             hasStarted = false;
@@ -815,6 +818,9 @@
          * 同じ絵文字が上下左右に一切隣り合わない初期盤面を生成
          */
         function createInitialBoard() {
+            // 既存のタイルDOMを必ずクリアして重複表示を防止
+            tilesLayerEl.innerHTML = '';
+            effectsLayerEl.innerHTML = '';
             board = Array.from({ length: GRID_SIZE }, () => Array(GRID_SIZE).fill(null));
 
             for (let r = 0; r < GRID_SIZE; r++) {
@@ -833,12 +839,13 @@
             }
 
             if (!findValidMove()) {
-                tilesLayerEl.innerHTML = '';
                 createInitialBoard();
                 return;
             }
 
+            const currentSession = gameSessionId;
             requestAnimationFrame(() => {
+                if (currentSession !== gameSessionId) return;
                 for (let r = 0; r < GRID_SIZE; r++) {
                     for (let c = 0; c < GRID_SIZE; c++) {
                         positionTileElement(board[r][c], r, c);
@@ -907,6 +914,50 @@
          * 6. ユーザー操作（クリック・タップ・スワイプ）
          * ==========================================
          */
+        function handlePointerMove(clientX, clientY) {
+            if (!pointerStart || pointerStart.swiped || isProcessing || isGameOver) return;
+            const dx = clientX - pointerStart.x;
+            const dy = clientY - pointerStart.y;
+            const threshold = 22;
+
+            if (Math.abs(dx) > threshold || Math.abs(dy) > threshold) {
+                pointerStart.swiped = true;
+                let targetR = pointerStart.r;
+                let targetC = pointerStart.c;
+
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    targetC += dx > 0 ? 1 : -1;
+                } else {
+                    targetR += dy > 0 ? 1 : -1;
+                }
+
+                clearSelection();
+                if (targetR >= 0 && targetR < GRID_SIZE && targetC >= 0 && targetC < GRID_SIZE) {
+                    attemptSwap(pointerStart.r, pointerStart.c, targetR, targetC);
+                }
+                pointerStart = null;
+            }
+        }
+
+        function handlePointerEnd() {
+            if (pointerStart && !pointerStart.swiped && !isProcessing && !isGameOver) {
+                handleTileClick(pointerStart.r, pointerStart.c);
+            }
+            pointerStart = null;
+        }
+
+        /**
+         * グローバルなマウス移動・離上イベントを1回だけ登録（多重登録による誤動作を防止）
+         */
+        function initGlobalPointerEvents() {
+            window.addEventListener('mousemove', (e) => {
+                if (pointerStart) handlePointerMove(e.clientX, e.clientY);
+            });
+            window.addEventListener('mouseup', () => {
+                if (pointerStart) handlePointerEnd();
+            });
+        }
+
         function attachTileEvents(el, tileObj) {
             const onStart = (clientX, clientY) => {
                 if (isProcessing || isGameOver) return;
@@ -918,48 +969,10 @@
                 pointerStart = { r: pos.r, c: pos.c, x: clientX, y: clientY, swiped: false };
             };
 
-            const onMove = (clientX, clientY) => {
-                if (!pointerStart || pointerStart.swiped || isProcessing || isGameOver) return;
-                const dx = clientX - pointerStart.x;
-                const dy = clientY - pointerStart.y;
-                const threshold = 22;
-
-                if (Math.abs(dx) > threshold || Math.abs(dy) > threshold) {
-                    pointerStart.swiped = true;
-                    let targetR = pointerStart.r;
-                    let targetC = pointerStart.c;
-
-                    if (Math.abs(dx) > Math.abs(dy)) {
-                        targetC += dx > 0 ? 1 : -1;
-                    } else {
-                        targetR += dy > 0 ? 1 : -1;
-                    }
-
-                    clearSelection();
-                    if (targetR >= 0 && targetR < GRID_SIZE && targetC >= 0 && targetC < GRID_SIZE) {
-                        attemptSwap(pointerStart.r, pointerStart.c, targetR, targetC);
-                    }
-                    pointerStart = null;
-                }
-            };
-
-            const onEnd = () => {
-                if (pointerStart && !pointerStart.swiped && !isProcessing && !isGameOver) {
-                    handleTileClick(pointerStart.r, pointerStart.c);
-                }
-                pointerStart = null;
-            };
-
             // マウスイベント
             el.addEventListener('mousedown', (e) => {
                 e.preventDefault();
                 onStart(e.clientX, e.clientY);
-            });
-            window.addEventListener('mousemove', (e) => {
-                if (pointerStart) onMove(e.clientX, e.clientY);
-            });
-            window.addEventListener('mouseup', () => {
-                if (pointerStart) onEnd();
             });
 
             // タッチイベント
@@ -971,12 +984,12 @@
 
             el.addEventListener('touchmove', (e) => {
                 if (e.touches.length === 1 && pointerStart) {
-                    onMove(e.touches[0].clientX, e.touches[0].clientY);
+                    handlePointerMove(e.touches[0].clientX, e.touches[0].clientY);
                 }
             }, { passive: true });
 
             el.addEventListener('touchend', () => {
-                onEnd();
+                handlePointerEnd();
             });
         }
 
@@ -1078,10 +1091,61 @@
          * スペシャルタイルをタップで即発動
          */
         async function triggerSpecialAt(r, c) {
+            const sessionId = gameSessionId;
             isProcessing = true;
             currentCombo = 0;
-            await processRemovalLoop([], [{ r, c }], null);
-            await postTurnCheck();
+            await processRemovalLoop([], [{ r, c }], null, sessionId);
+            if (sessionId !== gameSessionId) return;
+            await postTurnCheck(sessionId);
+            if (sessionId !== gameSessionId) return;
+            isProcessing = false;
+            scheduleHint();
+        }
+
+        /**
+         * 隣り合う2タイルの入れ替え処理
+         */
+        async function attemptSwap(r1, c1, r2, c2) {
+            const sessionId = gameSessionId;
+            isProcessing = true;
+            currentCombo = 0;
+            sound.playSwap();
+
+            swapInBoard(r1, c1, r2, c2);
+            await delay(200);
+            if (sessionId !== gameSessionId) return;
+
+            const t1 = board[r1][c1];
+            const t2 = board[r2][c2];
+            const specialTriggers = [];
+            if (t1 && t1.special) specialTriggers.push({ r: r1, c: c1 });
+            if (t2 && t2.special) specialTriggers.push({ r: r2, c: c2 });
+
+            const clusters = findClusters();
+
+            // どの同じ絵文字もくっつかず、スペシャルも発動しない場合はブルッと震えて戻る
+            if (clusters.length === 0 && specialTriggers.length === 0) {
+                sound.playInvalid();
+                if (t1) t1.el.classList.add('invalid-shake');
+                if (t2) t2.el.classList.add('invalid-shake');
+                await delay(240);
+                if (sessionId !== gameSessionId) return;
+                if (t1) t1.el.classList.remove('invalid-shake');
+                if (t2) t2.el.classList.remove('invalid-shake');
+
+                swapInBoard(r1, c1, r2, c2);
+                await delay(200);
+                if (sessionId !== gameSessionId) return;
+                isProcessing = false;
+                scheduleHint();
+                return;
+            }
+
+            await processRemovalLoop(clusters, specialTriggers, { r: r2, c: c2 }, sessionId);
+            if (sessionId !== gameSessionId) return;
+            await postTurnCheck(sessionId);
+            if (sessionId !== gameSessionId) return;
+
             isProcessing = false;
             scheduleHint();
         }
@@ -1139,11 +1203,12 @@
         /**
          * くっついたクラスター＆乾杯ボムの消去・連鎖ループ
          */
-        async function processRemovalLoop(initialClusters, initialSpecialTriggers = [], swappedPos = null) {
+        async function processRemovalLoop(initialClusters, initialSpecialTriggers = [], swappedPos = null, sessionId = gameSessionId) {
             let clusters = initialClusters;
             let specialTriggers = initialSpecialTriggers;
 
             while (clusters.length > 0 || specialTriggers.length > 0) {
+                if (sessionId !== gameSessionId) return;
                 currentCombo++;
                 if (currentCombo > maxCombo) maxCombo = currentCombo;
                 updateUI();
@@ -1216,6 +1281,7 @@
 
                 if (clusters.length > 0) {
                     await delay(145);
+                    if (sessionId !== gameSessionId) return;
                 }
 
                 // 5. 効果音
@@ -1269,6 +1335,7 @@
                 }
 
                 await delay(180);
+                if (sessionId !== gameSessionId) return;
 
                 // 7. DOM削除
                 cellsArray.forEach(({ r, c }) => {
@@ -1286,7 +1353,8 @@
                 });
 
                 // 9. 落下＆補充（3連鎖以上時は周囲と被りにくい絵文字を少し優先）
-                await dropAndRefill(currentCombo);
+                await dropAndRefill(currentCombo, sessionId);
+                if (sessionId !== gameSessionId) return;
 
                 swappedPos = null;
                 specialTriggers = [];
@@ -1297,7 +1365,7 @@
         /**
          * 落下＆補充（3連鎖以上続いた場合は無限連鎖を防ぐため周囲と被りにくい絵文字を優先）
          */
-        async function dropAndRefill(comboCount) {
+        async function dropAndRefill(comboCount, sessionId = gameSessionId) {
             for (let c = 0; c < GRID_SIZE; c++) {
                 let emptyRow = GRID_SIZE - 1;
                 for (let r = GRID_SIZE - 1; r >= 0; r--) {
@@ -1313,11 +1381,16 @@
 
                 let spawnOffset = 1;
                 for (let r = emptyRow; r >= 0; r--) {
+                    if (board[r][c]) {
+                        board[r][c].el.remove();
+                        board[r][c] = null;
+                    }
                     const typeIndex = pickRefillType(r, c, comboCount);
                     const newTile = createTileObject(r, c, typeIndex, false, -spawnOffset);
                     board[r][c] = newTile;
                     spawnOffset++;
                     requestAnimationFrame(() => {
+                        if (sessionId !== gameSessionId) return;
                         positionTileElement(newTile, r, c);
                     });
                 }
@@ -1347,10 +1420,10 @@
             }
             return Math.floor(Math.random() * TILE_TYPES.length);
         }
-
-        async function postTurnCheck() {
+        async function postTurnCheck(sessionId = gameSessionId) {
+            if (sessionId !== gameSessionId) return;
             if (!isGameOver && !findValidMove()) {
-                await shuffleBoard();
+                await shuffleBoard(sessionId);
             }
         }
 
@@ -1408,10 +1481,10 @@
             }
             return false;
         }
-
-        async function shuffleBoard() {
+        async function shuffleBoard(sessionId = gameSessionId) {
             showToast('🔀 手詰まり！シャッフルします');
             await delay(550);
+            if (sessionId !== gameSessionId) return;
 
             const allTiles = [];
             for (let r = 0; r < GRID_SIZE; r++) {
@@ -1437,7 +1510,6 @@
 
             // 万一ランダムシャッフルで収束しなければ隣接なし盤面を再生成
             if (findClusters().length > 0 || !findValidMove()) {
-                tilesLayerEl.innerHTML = '';
                 createInitialBoard();
                 return;
             }
@@ -1622,6 +1694,7 @@
         window.onload = () => {
             initBackgroundBubbles();
             initGridBg();
+            initGlobalPointerEvents();
             syncModeButtons();
             createInitialBoard();
             updateUI();
