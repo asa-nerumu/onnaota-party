@@ -313,11 +313,8 @@
     <!-- 背景のビール泡レイヤー -->
     <div id="bg-bubbles" class="bg-bubbles"></div>
 
-    <!-- BGMオーディオ要素（同じフォルダの Festario 8-Bit.mp3 または bgm.mp3 を自動ループ再生） -->
-    <audio id="bgm-audio" loop preload="auto">
-        <source src="Festario%208-Bit.mp3" type="audio/mpeg">
-        <source src="bgm.mp3" type="audio/mpeg">
-    </audio>
+    <!-- BGMオーディオ要素（同じフォルダの bgm.mp3 を自動ループ再生） -->
+    <audio id="bgm-audio" src="./bgm.mp3" loop preload="auto"></audio>
 
     <!-- スタート画面（タイトルオーバーレイ） -->
     <div id="start-overlay" class="fixed inset-0 z-50 bg-[#3D2314]/65 backdrop-blur-[3px] flex items-center justify-center p-4">
