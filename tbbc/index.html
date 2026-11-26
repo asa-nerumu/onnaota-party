@@ -313,8 +313,11 @@
     <!-- 背景のビール泡レイヤー -->
     <div id="bg-bubbles" class="bg-bubbles"></div>
 
-    <!-- BGMオーディオ要素（同じフォルダの bgm.mp3 を自動ループ再生） -->
-    <audio id="bgm-audio" src="bgm.mp3" loop preload="auto"></audio>
+    <!-- BGMオーディオ要素（同じフォルダの Festario 8-Bit.mp3 または bgm.mp3 を自動ループ再生） -->
+    <audio id="bgm-audio" loop preload="auto">
+        <source src="Festario%208-Bit.mp3" type="audio/mpeg">
+        <source src="bgm.mp3" type="audio/mpeg">
+    </audio>
 
     <!-- スタート画面（タイトルオーバーレイ） -->
     <div id="start-overlay" class="fixed inset-0 z-50 bg-[#3D2314]/65 backdrop-blur-[3px] flex items-center justify-center p-4">
@@ -544,10 +547,13 @@
              */
             tryStartBgm() {
                 if (this.muted || !this.bgmAudio) return;
+                this.bgmAudio.muted = false;
                 if (this.bgmAudio.paused) {
                     const playPromise = this.bgmAudio.play();
                     if (playPromise !== undefined) {
-                        playPromise.catch(() => {});
+                        playPromise.catch((err) => {
+                            console.warn('BGM再生できませんでした（ファイル配置・ブラウザ制限を確認してください）:', err);
+                        });
                     }
                 }
             }
@@ -908,6 +914,7 @@
             const onStart = (clientX, clientY) => {
                 if (isProcessing || isGameOver) return;
                 sound.init();
+                sound.tryStartBgm();
                 clearHint();
                 const pos = findTilePosition(tileObj);
                 if (!pos) return;
